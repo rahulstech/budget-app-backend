@@ -4,13 +4,12 @@
     "module": "nodenext",
     "rootDir": "src",
     "outDir": "dist",
-    
-
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "express"],
+    "allowImportingTsExtensions": false
   },
-  "include": ["src"]
+  "include": ["src", "types"]
 }

@@ -4,9 +4,12 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch --trace-uncaught --loader ts-node/esm src/index.ts",
+    "dev": "node --env-file=development.env --watch --trace-uncaught --trace-warnings --import tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node --env-file=development.env dist/index.js",
+    "drizzle-generate": "drizzle-kit generate",
+    "drizzle-generate:custom": "drizzle-kit generate --custom",
+    "drizzle-migrate": "drizzle-kit migrate"
   },
   "keywords": [],
   "author": "",
@@ -15,11 +18,18 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^25.1.0",
+    "@types/pg": "^8.16.0",
+    "drizzle-kit": "^0.31.8",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
+    "pg": "^8.18.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
     "zod": "^4.3.6"
   }
 }
