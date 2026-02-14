@@ -2,7 +2,7 @@
 
 -- Create sync event sequence counter table
 CREATE TABLE IF NOT EXISTS "event_sequences"(
-    "budget_id" UUID NOT NULL PRIMARY KEY REFERENCES "budgets"("id"),
+    "budget_id" UUID NOT NULL PRIMARY KEY,
     "sequence_no" BIGINT NOT NULL
 );
 

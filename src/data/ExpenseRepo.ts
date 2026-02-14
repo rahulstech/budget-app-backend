@@ -1,4 +1,4 @@
-import { PagedResult } from "../core/CoreTypes.js";
+import { PagedResult } from "../core/Types.js";
 import { Expense, UpdateExpenseModel } from "./Models.js";
 
 export interface ExpenseRepo {
@@ -17,9 +17,9 @@ export interface ExpenseRepo {
      */
     getExpenses(
         budgetId: string,
-        page: number,
-        perPage: number,
-    ): Promise<PagedResult<number,Expense>>
+        limit: number,
+        offset: number,
+    ): Promise<Omit<Expense,"serverCreatedAt">[]>
 
     /**
      * Updates an expense using optimistic locking.

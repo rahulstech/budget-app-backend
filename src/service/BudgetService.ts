@@ -4,20 +4,28 @@ import { RepoFactory } from "../data/RepoFactory.js";
 import { BudgetPolicy } from "./BudgetPolicy.js";
 import { AddCategoryDto, AddExpenseDto, AddParticipantDto, CreateBudgetDto, DeleteBudgetDto,
      DeleteCategoryDto, DeleteExpenseDto, EditBudgetDto, EditCategoryDto, EditExpenseDto, 
-     RemoveParticipantDto, EventDto } from "./Dtos.js";
+     RemoveParticipantDto, EventDto, 
+     ParticipantUser} from "./Dtos.js";
 import { EventBuilder, toEventDto, toParticipant,
      toCategory, toExpense, toBudget } from "./Mappers.js";
 import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
 import { Budget, Category, Expense, Participant } from "../data/Models.js";
-import { PagedResult } from "../core/CoreTypes.js";
+import { PagedResult } from "../core/Types.js";
+import { BudgetRepo } from "../data/BudgetRepo.js";
+
+const MAX_RESULTS = 100;
 
 export class BudgetService {
 
     private readonly policy: BudgetPolicy;
 
+    private readonly budgetRepo: BudgetRepo;
+
     constructor(private readonly client: RepoClient) {
-        this.policy = new BudgetPolicy(client.getRepoFactory());
+        const factory = client.getRepoFactory();
+        this.policy = new BudgetPolicy(factory);
+        this.budgetRepo = factory.createBudgetRepo();
     }
 
     /**
@@ -72,6 +80,13 @@ export class BudgetService {
             throw new HttpError.NotFound();
         }
         return budget;
+    }
+
+    async getBudgetsForParticipant(userId: string, key: number, count: number): Promise<PagedResult<number, Omit<Budget, "serverCreatedAt"|"createdBy">>> {
+        const limit = Math.min(count, 100); // hard cap
+        const offset = (key-1)*limit;
+        const items = await this.budgetRepo.getBudgetsOfParticipant(userId, limit, offset);
+        return { key, items };
     }
 
     /**
@@ -182,10 +197,10 @@ export class BudgetService {
         });
     }
 
-    async getParticipantsOfBudget(budgetId: string): Promise<Participant[]> {
+    async getParticipantsOfBudget(budgetId: string): Promise<ParticipantUser[]> {
         const repo = this.client.getRepoFactory().createParticipantRepo();
-        const result = await repo.getBudgetParticipants(budgetId);
-        return result;
+        const results = await repo.getBudgetParticipants(budgetId);
+        return results.map(id => ({ id }));
     }
 
     /**
@@ -202,14 +217,14 @@ export class BudgetService {
      * - Sync event recorded
      */
     async removeParticipant(dto: RemoveParticipantDto): Promise<EventDto> {
+        const { budgetId, userId, actorUserId } = dto;
 
-        await this.policy.canRemoveParticipant(dto.budgetId, dto.userId, dto.actorUserId);
+        await this.policy.canRemoveParticipant(budgetId, actorUserId, userId);
 
         return this.client.runInTransaction(async (factory) => {
             const participantRepo = factory.createParticipantRepo();
             const eventRepo = factory.createEventRepo();
-            const { budgetId, userId } = dto;
-
+        
             try {
                 // mark participant left
                 await participantRepo.deleteParticipant(budgetId, userId);
@@ -266,7 +281,7 @@ export class BudgetService {
         })
     }
 
-    async getCategoriesOfBudget(budgetId: string): Promise<Category[]> {
+    async getCategoriesOfBudget(budgetId: string): Promise<any[]> {
         const categoryRepo = this.client.getRepoFactory().createCategoryRepo();
         const result = await categoryRepo.getBudgetCategories(budgetId);
         return result;
@@ -340,7 +355,7 @@ export class BudgetService {
                 await categoryRepo.deleteCategory(dto.id, dto.version);
 
                 // insert sync event
-                const event = await eventRepo.insertEvent(EventBuilder.deleteExpense(dto));
+                const event = await eventRepo.insertEvent(EventBuilder.deleteCategory(dto));
 
                 // return sync event
                 return toEventDto(event);
@@ -392,10 +407,12 @@ export class BudgetService {
         });
     }
 
-    async getExpensesOfBudget(budgetId: string, page: number, per_page: number): Promise<PagedResult<number,Expense>> {
+    async getExpensesOfBudget(budgetId: string, key: number, count: number): Promise<PagedResult<number,any>> {
+        const limit = Math.min(count, MAX_RESULTS);
+        const offset = (key-1)*limit;
         const expenseRepo = this.client.getRepoFactory().createExpenseRepo();
-        const result = await expenseRepo.getExpenses(budgetId,page,per_page);
-        return result;
+        const items = await expenseRepo.getExpenses(budgetId,limit,offset);
+        return { key, items };
     }
 
     /**
@@ -508,7 +525,7 @@ export class BudgetService {
             const events = await eventRepo.getBudgetEvents(budgetId, userId, lastSequence, itemCount);
 
             // map to DTOs
-            return events.items.map(toEventDto);
+            return events.map(toEventDto);
         });
     }
 

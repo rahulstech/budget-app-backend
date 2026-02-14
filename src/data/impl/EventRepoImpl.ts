@@ -2,7 +2,6 @@ import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
 import { EventRepo } from "../EventRepo.js";
 import { events } from "../schema/Tables.js";
 import { Database, Event } from "../Models.js";
-import { PagedResult } from "../../core/CoreTypes.js";
 
 export class EventRepoImpl implements EventRepo {
 
@@ -21,11 +20,19 @@ export class EventRepoImpl implements EventRepo {
     }
 
 
-    async getBudgetEvents(budgetId: string, excludeUserId: string, lastSequence: number, itemCount: number = 20): Promise<PagedResult<number, Event>> {
+    async getBudgetEvents(
+        budgetId: string, excludeUserId: string, lastSequence: number, itemCount: number = 20
+    ): Promise<Omit<Event,"id"|"sequence"|"serverCreatedAt">[]> {
         const safeItemCount = Math.min(itemCount, 100); // hard cap
 
-        const items = await this.db
-            .select()
+        return await this.db
+            .select({
+                type: events.type,
+                budgetId: events.budgetId,
+                userId: events.userId,
+                recordId: events.recordId,
+                data: events.data,
+            })
             .from(events)
             .where(and(
                 eq(events.budgetId, budgetId),
@@ -34,7 +41,5 @@ export class EventRepoImpl implements EventRepo {
             ))
             .orderBy(asc(events.sequence))
             .limit(safeItemCount);
-
-        return { key: lastSequence, items };
     }
 }

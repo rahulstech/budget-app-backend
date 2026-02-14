@@ -4,7 +4,7 @@ export interface CategoryRepo {
     
     insertCategory(category: Category): Promise<Category>;
 
-    getBudgetCategories(budgetId: string): Promise<Category[]>;
+    getBudgetCategories(budgetId: string): Promise<Omit<Category,"serverCreatedAt">[]>;
 
     updateCategory(id: string, updates: UpdateCategoryModel, expectedVersion: number, newLastModified: number): Promise<Category>;
 

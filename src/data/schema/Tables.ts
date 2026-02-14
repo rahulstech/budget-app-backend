@@ -101,9 +101,6 @@ export const events = pgTable("accepted_events", {
   // event type
   type: text("type").notNull(),
 
-  // utc epoch millis when event actually occured in client end
-  when: bigint("when", { mode: "number" }).notNull(),
-
   // user who made the event
   userId: text("user_id").notNull(),
 

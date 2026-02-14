@@ -1,7 +1,7 @@
 import { BudgetRepo } from "../BudgetRepo.js";
-import { budgets } from "../schema/Tables.js";
+import { budgets, participants } from "../schema/Tables.js";
 import { Budget, Database, UpdateBudgetModel } from "../Models.js";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { RepoError } from "../RepoError.js";
 
 export class BudgetRepoImpl implements BudgetRepo {
@@ -16,6 +16,24 @@ export class BudgetRepoImpl implements BudgetRepo {
   async getBudgetById(id: string): Promise<Budget | null> {
     const [budget] = await this.db.select().from(budgets).where(eq(budgets.id,id));
     return budget ?? null;
+  }
+
+  async getBudgetsOfParticipant(userId: string, limit: number, offset: number): Promise<Omit<Budget,"serverCreatedAt"|"createdBy">[]> {
+    const results = await this.db.select({
+      id: budgets.id,
+      title: budgets.title,
+      details: budgets.details,
+      version: budgets.version,
+      offlineLastModified: budgets.offlineLastModified
+    })
+      .from(budgets)
+      .innerJoin(participants, eq(budgets.id, participants.budgetId))
+      .where(eq(participants.userId, userId))
+      .orderBy(desc(budgets.serverCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    return results;
   }
 
   async updateBudget(id: string, updates: UpdateBudgetModel, expectedVersion: number, lastModified: number): Promise<Budget> {

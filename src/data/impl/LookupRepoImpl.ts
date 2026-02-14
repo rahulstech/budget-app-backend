@@ -2,7 +2,7 @@ import { LookupRepo } from "../LookupRepo.js";
 import { budgets, categories, expenses, participants, events } from "../schema/Tables.js";
 import { and, count, desc, eq } from "drizzle-orm";
 import { Database } from "../Models.js";
-import { EventType } from "../../core/CoreTypes.js";
+import { EventType } from "../../core/Types.js";
 
 export class LookupRepoImpl implements LookupRepo {
 
@@ -110,22 +110,22 @@ export class LookupRepoImpl implements LookupRepo {
     atMillis: number
   ): Promise<boolean> {
 
-    const [resultLastAdded] = await this.db.select({ whenLastAdded: events.when }).from(events)
+    const [resultLastAdded] = await this.db.select({ whenLastAdded: events.serverCreatedAt }).from(events)
     .where(and(
       eq(events.budgetId, budgetId),
       eq(events.type, EventType.ADD_PARTICIPANT),
       eq(events.recordId, userId))
     )
-    .orderBy(desc(events.when))
+    .orderBy(desc(events.serverCreatedAt))
     .limit(1);
 
-    const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.when }).from(events)
+    const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.serverCreatedAt }).from(events)
     .where(and(
       eq(events.budgetId, budgetId),
       eq(events.type, EventType.REMOVE_PARTICIPANT),
       eq(events.recordId, userId))
     )
-    .orderBy(desc(events.when))
+    .orderBy(desc(events.serverCreatedAt))
     .limit(1);
 
     if (!resultLastAdded) {

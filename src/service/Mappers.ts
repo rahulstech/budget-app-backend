@@ -1,6 +1,11 @@
 import { Budget, Category, Expense, Participant, Event } from "../data/Models.js";
-import { CreateBudgetDto, AddCategoryDto, AddExpenseDto, EventDto, EditExpenseDto, DeleteExpenseDto, EditCategoryDto, EditBudgetDto, DeleteCategoryDto, DeleteBudgetDto, AddParticipantDto, RemoveParticipantDto } from "./Dtos.js";
-import { EventType } from "../core/CoreTypes.js";
+import { CreateBudgetDto, AddCategoryDto, AddExpenseDto, EventDto, EditExpenseDto, 
+    DeleteExpenseDto, EditCategoryDto, EditBudgetDto, DeleteCategoryDto, DeleteBudgetDto,
+     AddParticipantDto, RemoveParticipantDto, 
+     BudgetDto,
+     CategoryDto,
+     ExpenseDto} from "./Dtos.js";
+import { EventType } from "../core/Types.js";
 import { generateUUID } from "../core/Helpers.js";
 
 // dto -> model
@@ -57,14 +62,38 @@ export function toParticipant(dto: AddParticipantDto): Participant {
 
 // model -> dto
 
-export function toEventDto(event: Event): EventDto {
-    const { budgetId, sequence, type, when, userId: actorUserId, recordId, data } = event;
+export function toBudgetDto(budget: Budget): BudgetDto {
+    const { id, createdBy, title, details, version, offlineLastModified: lastModified } = budget;
     return {
-        budgetId,
-        sequence,
-        actorUserId,
+        id, 
+        createdBy, 
+        title,
+        details: details ?? undefined, 
+        version,
+        lastModified,
+    }
+}
+
+export function toCategoryDto(category: Category): CategoryDto {
+    const { id, budgetId, createdBy, name, allocate, version, offlineLastModified: lastModified } = category;
+    return {
+        id, budgetId, createdBy, name, allocate, version, lastModified
+    };
+}
+
+export function toExpenseDto(expense: Expense): ExpenseDto {
+    const { id, budgetId, categoryId, createdBy, date, amount, note, version, offlineLastModified: lastModified} = expense;
+    return {
+        id, budgetId, categoryId, createdBy, date, amount, version, lastModified 
+    };
+}
+
+export function toEventDto(event: any): EventDto {
+    const { budgetId, type, userId: actorUserId, recordId, data } = event;
+    return {
         type: type as EventType,
-        when,
+        budgetId,
+        actorUserId,
         recordId,
         data: data as Record<string,any>
     };
@@ -84,24 +113,22 @@ export class EventBuilder {
     }
 
     static createBudget(budget: Budget): Event {
-        const { id: budgetId, title, details, createdBy: userId, version, offlineLastModified: when } = budget;
+        const { id: budgetId, title, details, createdBy: userId, version, offlineLastModified } = budget;
         return {
             ...this.base(budgetId,userId),
             type: EventType.CREATE_BUDGET,
-            when,
             recordId: budgetId,
-            data: { title, details, version }
+            data: { title, details, version, offlineLastModified }
         };
     }
 
     static editBudget(dto: EditBudgetDto, newVersion: number): Event {
-        const { id, title, details, actorUserId, lastModified: when } = dto;
+        const { id, title, details, actorUserId, lastModified: offlineLastModified } = dto;
         return {
             ...this.base(id, actorUserId),
             type: EventType.EDIT_BUDGET,
-            when,
             recordId: id,
-            data: { title, details, version: newVersion }
+            data: { title, details, version: newVersion, offlineLastModified }
         };
     }
 
@@ -110,63 +137,68 @@ export class EventBuilder {
         return {
             ...this.base(budgetId,userId),
             type: EventType.DELETE_BUDGET,
-            when: Date.now(),
             recordId: budgetId,
         };
     }
 
 
     static addCategory(category: Category): Event {
-        const { id, budgetId, name, allocate, version, createdBy: userId, offlineLastModified: when } = category;
+        const { id, budgetId, name, allocate, version, createdBy: userId, offlineLastModified } = category;
         return {
             ...this.base(budgetId,userId),
             type: EventType.ADD_CATEGORY,
-            when,
             recordId: id,
-            data: { name, allocate, version }
+            data: { name, allocate, version, offlineLastModified }
         };
     }
 
     static editCategory(dto: EditCategoryDto, newVersion: number): Event {
-        const { id: recordId, budgetId, actorUserId: userId, name, allocate, lastModified: when } = dto;
+        const { id: recordId, budgetId, actorUserId: userId, name, allocate, lastModified: offlineLastModified } = dto;
         return {
             ...this.base(budgetId,userId),
             type: EventType.ADD_CATEGORY,
-            when,
             recordId,
-            data: { name, allocate, version: newVersion }
+            data: { name, allocate, version: newVersion, offlineLastModified }
+        };
+    }
+
+    static deleteCategory(dto: DeleteCategoryDto): Event {
+        const { id: recordId, budgetId, actorUserId: userId, version, lastModified: offlineLastModified } = dto;
+        return {
+            ...this.base(budgetId,userId),
+            type: EventType.ADD_CATEGORY,
+            recordId,
+            data: { version, offlineLastModified }
         };
     }
 
     static addExpense(expense: Expense): Event {
-        const { id, budgetId, categoryId, createdBy: userId, date, note, amount, version, offlineLastModified: when } = expense;
+        const { id, budgetId, categoryId, createdBy: userId, date, note, amount, version, offlineLastModified } = expense;
         return {
             ...this.base(budgetId,userId),
             type: EventType.ADD_EXPENSE,
-            when,
             recordId: id,
-            data: { categoryId, date, note, amount, version }
+            data: { categoryId, date, note, amount, version, offlineLastModified }
         };
     }
 
     static editExpense(dto: EditExpenseDto, newVersion: number): Event {
-        const { id: recordId, budgetId, actorUserId: userId, date, amount, note, lastModified: when} = dto;
+        const { id: recordId, budgetId, actorUserId: userId, date, amount, note, lastModified: offlineLastModified } = dto;
         return {
             ...this.base(budgetId,userId),
             type: EventType.EDIT_EXPENSE,
-            when,
             recordId,
-            data: { date, note, amount, version: newVersion }
+            data: { date, note, amount, version: newVersion, offlineLastModified }
         };
     }
 
     static deleteExpense(dto: DeleteExpenseDto): Event {
-        const { id: recordId, budgetId, actorUserId: userId, lastModified: when } = dto;
+        const { id: recordId, budgetId, actorUserId: userId, version, lastModified: offlineLastModified } = dto;
         return {
             ...this.base(budgetId,userId),
             type: EventType.DELETE_EXPENSE,
-            when,
             recordId,
+            data: { version, offlineLastModified }
         };
     }
 
@@ -175,7 +207,6 @@ export class EventBuilder {
         return {
             ...this.base(budgetId, actorUserId),
             type: EventType.ADD_PARTICIPANT,
-            when: Date.now(),
             recordId: userId,
         };
     }
@@ -185,7 +216,6 @@ export class EventBuilder {
         return {
             ...this.base(budgetId, actorUserId),
             type: EventType.REMOVE_PARTICIPANT,
-            when: Date.now(),
             recordId: userId,
         };
     }

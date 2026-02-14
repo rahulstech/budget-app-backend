@@ -20,9 +20,13 @@ export class ParticipantRepoImpl implements ParticipantRepo {
         );
     }
 
-    async getBudgetParticipants(budgetId: string): Promise<Participant[]> {
-        return await this.db.select()
+    async getBudgetParticipants(budgetId: string): Promise<string[]> {
+        const rows = await this.db.select({
+            userId: participants.userId
+        })
             .from(participants)
-            .where(eq(participants.budgetId, budgetId))
+            .where(eq(participants.budgetId, budgetId));
+
+        return rows.map(p => p.userId);
     }
 }

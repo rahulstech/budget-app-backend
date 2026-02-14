@@ -1,6 +1,6 @@
 // Budget DTOs
 
-import { EventType } from "../core/CoreTypes.js"
+import { EventType } from "../core/Types.js"
 
 export type CreateBudgetDto = {
     id: string,
@@ -28,11 +28,11 @@ export type DeleteBudgetDto = {
 
 export type BudgetDto = {
     id: string,
+    createdBy: string,
     title: string,
     details?: string,
     version: number,
-    last_modified: number,
-    created_by: string,
+    lastModified: number,
 }
 
 // Category DTOs
@@ -112,11 +112,12 @@ export type ExpenseDto = {
     id: string,
     budgetId: string,
     categoryId: string,
-    date: number,
+    createdBy: string,
+    date: string,
     amount: string,
     note?: string,
     version: number,
-    last_modified: number,
+    lastModified: number,
 }
 
 // Participant DTOs
@@ -140,12 +141,14 @@ export type ParticipantDto = {
     leftAtMillis?: number,
 }
 
+export type ParticipantUser = {
+    id: string
+};
+
 // Event DTOs
 
 export type EventDto = {
-    sequence: number,
     type: EventType,
-    when: number,
     budgetId: string,
     recordId: string,
     actorUserId: string,

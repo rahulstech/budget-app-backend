@@ -9,9 +9,10 @@ const EnvSchema = z.object({
     DB_HOST: z.hostname(),
     DB_PORT: z.coerce.number().int(),
     DB_NAME: z.string(),
+    DB_MAX_CONNECTION: z.coerce.number().int().default(1),
     DB_USE_SSL: z.coerce.boolean().default(false),
-
-    SERVER_PORT: z.coerce.number().int().default(3000),
+    DB_SSL_CA_BASE64: z.base64().nonempty().default(""),
+    API_KEY_ANDROID: z.string().nonempty().default(""),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -22,7 +23,7 @@ if (!parsed.success) {
 
 export const Environment = parsed.data;
 
-export const isDevEnvironment = process.env.NODE_ENV === "dev";
+export const isDevEnvironment = (): boolean =>  process.env.NODE_ENV === "dev";
 
-export const isProdEnvironment = process.env.NODE_ENV === "prod";
+export const isProdEnvironment = (): boolean => process.env.NODE_ENV === "prod";
 

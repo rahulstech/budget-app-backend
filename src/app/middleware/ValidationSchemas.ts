@@ -1,5 +1,5 @@
 import z from "zod";
-import { EventType } from "../core/CoreTypes.js";
+import { EventType } from "../../core/Types.js";
 
 /**
  * Shared primitives
@@ -107,31 +107,28 @@ export const EventSchema = z.discriminatedUnion("event", [
 /**
  * Batch schema: 1–25 events
  */
-export const EventsBatchSchema = z.array(
-  z.looseObject({
+export const CreateEventsBodySchema = z.object({
+  events: z.array(z.looseObject({
     event: z.string(),
     lastModified: EpochMillis
-  })
-).min(1).max(25);
+  })).min(1).max(25)
+});
 
 
 // Query schema for fetching sync events
 export const GetEventsQuerySchema = z.object({
-  after: z.coerce.number().int().optional().default(0),
-  count: z.coerce.number().int().optional().default(20),
+    key: z.coerce.number().int().positive().optional(),
+  count: z.coerce.number().int().positive().optional(),
 }).strict();
 
 export const SnapShotQuerySchema = z.object({
   entity: z.enum(["budget", "participant", "category", "expense"]),
-  page: z.coerce.number().int().optional(),
-  per_page: z.coerce.number().int().optional(),
-}).strict()
+  key: z.coerce.number().int().positive().optional(),
+  count: z.coerce.number().int().positive().optional(),
+}).strict();
 
+export const GetBudgetsQuerySchema = z.object({
+  key: z.coerce.number().int().positive().optional(),
+  count: z.coerce.number().int().positive().optional(),
+}).strict();
 
-export type EventBatchRequestModel = z.infer<typeof EventsBatchSchema>;
-
-export type EventRequestModel = z.infer<typeof EventSchema>;
-
-export type SyncRequestModel = z.infer<typeof GetEventsQuerySchema>;
-
-export type SnapShotRequestModel = z.infer<typeof SnapShotQuerySchema>;

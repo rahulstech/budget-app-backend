@@ -13,7 +13,9 @@ export type Config = {
     DB_HOST: string,
     DB_PORT: number,
     DB_NAME: string,
-    DB_USE_SSL: boolean, 
+    DB_USE_SSL: boolean,
+    DB_SSL_CA?: string,
+    DB_MAX_CONNECTION?: number,
 }
 
 export class RepoClientImpl implements RepoClient {
@@ -31,15 +33,24 @@ export class RepoClientImpl implements RepoClient {
             DB_HOST,
             DB_PORT,
             DB_NAME,
-            DB_USE_SSL
+            DB_MAX_CONNECTION,
+            DB_USE_SSL,
+            DB_SSL_CA,
         } = config;
+
+
+
         this.pool = new Pool({
+            max: DB_MAX_CONNECTION,
             user: DB_USER,
             password: DB_PASS,
             host: DB_HOST,
             port: DB_PORT,
             database: DB_NAME,
-            ssl: DB_USE_SSL,
+            ssl: DB_USE_SSL ? {
+                ca: DB_SSL_CA,
+                rejectUnauthorized: true
+            } : false
         });
 
         onShutdown(this.disconnect);

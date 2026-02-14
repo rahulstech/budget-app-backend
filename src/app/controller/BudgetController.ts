@@ -1,75 +1,90 @@
 import { HttpError } from "../../core/HttpError.js";
 import { BudgetService } from "../../service/BudgetService.js";
 import { CreateBudgetDto, EventDto } from "../../service/Dtos.js";
-import { EventType } from "../../core/CoreTypes.js";
-import { EventBatchRequestModel, EventRequestModel, EventSchema, SyncRequestModel } from "../ValidationSchemas.js";
+import { EventType } from "../../core/Types.js";
+import { EventSchema } from "../middleware/ValidationSchemas.js";
 import { logError } from "../../core/Logger.js";
-import { EventResponseModel, SyncResponseModel } from "../AppTypes.js";
+import { ControllerParams, CreateEventsBodyModel, EventRequestModel, EventResponseModel, SyncResponseModel } from "../Types.js";
+import { toBudgetDto, toCategoryDto, toExpenseDto } from "../../service/Mappers.js";
+import { mapZodErrorToHttpError } from "../../core/Mappers.js";
 
 /**
  * Controller Methods
  */
 
 // Create a budget
-export async function handlePostBudget(service: BudgetService, body: any, actorUserId: string) {
+export async function handlePostBudget(service: BudgetService, params: ControllerParams) {
+  const { userId, body } = params;
   const dto: CreateBudgetDto = {
     id: body.id,
-    actorUserId,
+    actorUserId: userId,
     title: body.title,
     details: body.details,
     lastModified: body.lastModified,
   };
 
-  const { budgetId, data } = await service.createBudget(dto);
-  const { version } = data!;
-  return { budgetId, version };
+  const { budgetId, data, actorUserId } = await service.createBudget(dto);
+
+  return { id: budgetId, createdBy: actorUserId, version: data!.version };
 }
 
 
 // Append offline evnets
-export async function handlePostEvents(
-  service: BudgetService,
-  events: EventBatchRequestModel,
-  budgetId: string,
-  actorUserId: string
-): Promise<EventResponseModel[]> {
-  return Promise.all(
-    events
+export async function handlePostEvents(service: BudgetService, params: ControllerParams): Promise<{ events: EventResponseModel[] }> {
+  const { body, userId, budgetId } = params;
+  return { events: await Promise.all((body as CreateEventsBodyModel).events
     .sort((a,b) => a.lastModified - b.lastModified) // sort ascending order of lastModified
-    .map((e) => processSingleEvent(service, e, budgetId, actorUserId))
-  );
+    .map((e) => processSingleEvent(service, e, budgetId, userId))
+    )
+  };
 }
 
 
 // Sync events
-export async function handleGetEvents(service: BudgetService, queries: SyncRequestModel, budgetId: string, userId: string): Promise<SyncResponseModel[]> {
-  const { after, count } = queries;
-  const events = await service.getEvents(budgetId, userId, after, count );
-  return events.map(toSyncResponseModel);
+export async function handleGetEvents(service: BudgetService, params: ControllerParams): Promise<{ events: SyncResponseModel[] }> {
+  const { userId, budgetId, key, count } = params;
+  const events = await service.getEvents(budgetId, userId, key, count);
+  return { events: events.map(toSyncResponseModel) };
 }
 
 // Join Participant
-export async function handleJoinPartcipant(service: BudgetService, budgetId: string, userId: string) {
+export async function handleJoinPartcipant(service: BudgetService, params: ControllerParams) {
+  const { budgetId, userId } = params
   await service.addParticipant({ budgetId, actorUserId: userId, userId });
   return true;
 }
 
 // Leave Participant
-export async function handleLeavePariticipant(service: BudgetService, budgetId: string, userId: string) {
+export async function handleLeavePariticipant(service: BudgetService, params: ControllerParams) {
+  const { budgetId, userId } = params;
   await service.removeParticipant({ budgetId, actorUserId: userId, userId });
 }
 
+// Remove Participant
+export async function handleRemoveParticipant(service: BudgetService, params: ControllerParams) {
+  const { budgetId, userId, participantId } = params;
+  await service.removeParticipant({ budgetId, actorUserId: userId, userId: participantId }) 
+}
+
 // Get SnapShot
-export async function handleGetSnapShot(service: BudgetService, budgetId: string, userId: string, entity: string, params: any) {
+export async function handleGetSnapShot(service: BudgetService, params: ControllerParams): Promise<unknown> {
+  const { budgetId, entity, key, count } = params;
   switch(entity) {
     case "budget": {
-      return await service.getBudget(budgetId);
+      return toBudgetDto(await service.getBudget(budgetId));
     }
     case "participant": {
-      return await service.getParticipantsOfBudget(budgetId);
+      return { participants: await service.getParticipantsOfBudget(budgetId) };
     }
     case "category": {
-      return await service.getCategoriesOfBudget(budgetId);
+      return { categories: (await service.getCategoriesOfBudget(budgetId)).map(toCategoryDto) };
+    }
+    case "expense": {
+      const { items } = await service.getExpensesOfBudget(budgetId, key, count);
+      return { 
+        key, 
+        expenses: items.map(toExpenseDto)
+      };
     }
     default: {
       throw new HttpError.BadRequest("UNKNOWN_ENTITY");
@@ -77,18 +92,14 @@ export async function handleGetSnapShot(service: BudgetService, budgetId: string
   }
 }
 
-export async function handleGetSnapShotPaged(service: BudgetService, budgetId: string, userId: string, entity: string, params: any) {
-  switch(entity) {
-    case "expense": {
-      const page = params.page as number;
-      const per_page = params.per_page as number;
-      const result = await service.getExpensesOfBudget(budgetId, page, per_page);
-      return result.items;
-    }
-    default: {
-      throw new HttpError(400,"UNKNOWN_ENTITY");
-    }
-  }
+
+export async function handleGetBudgetsOfParticipant(service: BudgetService, params: ControllerParams): Promise<unknown> {
+  const { userId, key, count } = params;
+  const { key: page, items: budgets } = await service.getBudgetsForParticipant(userId, key, count);
+  return { 
+    page, 
+    budgets
+  };
 }
 
 /**
@@ -109,7 +120,7 @@ async function processSingleEvent(
     const httpError = error as HttpError;
     return {
       ...rawEvent,
-      erros: httpError.errorItems?.map(item => item.message) ?? [httpError.message]
+      erros: httpError.flatten()
     }
   }
 }
@@ -118,11 +129,7 @@ async function processSingleEvent(
 function validateSingleEvent(rawEvent: Record<string,any>): EventRequestModel {
   const parsed = EventSchema.safeParse(rawEvent);
   if (!parsed.success) {
-      const errorItems: HttpError.ErrorItem[] = parsed.error.issues.map((issue) => ({
-        message: issue.message,
-      }));
-
-      throw new HttpError(400, null, errorItems);
+      throw mapZodErrorToHttpError(parsed.error);
     }
 
   return parsed.data;
@@ -249,7 +256,7 @@ function normalizeFailure(event: any, budgetId: string, err: any): EventResponse
     return {
       event: event.event,
       id: event.id ?? budgetId,
-      errors: err.errorItems?.map(item => item.message) ?? [err.message],
+      errors: err.flatten(),
     };
   }
   
@@ -267,9 +274,7 @@ function toSyncResponseModel(dto: EventDto): SyncResponseModel {
   let base: SyncResponseModel = {
     budgetId: dto.budgetId,
     actorUserId: dto.actorUserId,
-    sequence: dto.sequence,
     type: dto.type,
-    when: dto.when,
   };
 
   // map recordId to a semantic id based on event type

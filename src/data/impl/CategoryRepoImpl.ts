@@ -13,8 +13,16 @@ export class CategoryRepoImpl implements CategoryRepo {
         return newCategory;
     }
 
-    async getBudgetCategories(budgetId: string): Promise<Category[]> {
-        return this.db.select()
+    async getBudgetCategories(budgetId: string): Promise<Omit<Category,"serverCreatedAt">[]> {
+        return this.db.select({
+            id: categories.id,
+            budgetId: categories.budgetId,
+            createdBy: categories.createdBy,
+            name: categories.name,
+            allocate: categories.allocate,
+            version: categories.version,
+            offlineLastModified: categories.offlineLastModified
+        })
             .from(categories)
             .where(eq(categories.budgetId,budgetId));
     }

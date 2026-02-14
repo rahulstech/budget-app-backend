@@ -3,7 +3,6 @@ import { ExpenseRepo } from "../ExpenseRepo.js";
 import { expenses } from "../schema/Tables.js";
 import { Database, Expense, UpdateExpenseModel } from "../Models.js";
 import { RepoError } from "../RepoError.js";
-import { PagedResult } from "../../core/CoreTypes.js";
 
 export class ExpenseRepoImpl implements ExpenseRepo {
 
@@ -19,19 +18,26 @@ export class ExpenseRepoImpl implements ExpenseRepo {
         return row;
     }
 
-    async getExpenses(budgetId: string, page: number, perPage: number = 20): Promise<PagedResult<number, Expense>> {
-        const limit = perPage;
-        const offset = (page - 1) * perPage;  
-
-        const items = await this.db
-                .select()
+    async getExpenses(
+        budgetId: string, limit: number, offset: number = 20
+    ): Promise<Omit<Expense,"serverCreatedAt">[]> {
+        return await this.db
+                .select({
+                    id: expenses.id,
+                    budgetId: expenses.budgetId,
+                    categoryId: expenses.categoryId,
+                    date: expenses.date,
+                    amount: expenses.amount,
+                    note: expenses.note,
+                    version: expenses.version,
+                    offlineLastModified: expenses.offlineLastModified,
+                    createdBy: expenses.createdBy,
+                })
                 .from(expenses)
                 .where(eq(expenses.budgetId, budgetId))
+                .orderBy(asc(expenses.serverCreatedAt))
                 .limit(limit)
-                .offset(offset)
-                .orderBy(asc(expenses.serverCreatedAt));
-
-        return { key: page, items };
+                .offset(offset);
     }
 
     /* ================= Update ================= */

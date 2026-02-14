@@ -7,21 +7,21 @@ function getHttpStatusMessage(statusCode: number): string {
 
 export class HttpError extends AppError {
 
-    constructor(readonly statusCode: number, message: string | null = null, readonly errorItems?: HttpError.ErrorItem[]) {
-        super(message ?? getHttpStatusMessage(statusCode), false);
+    readonly issues?: HttpError.ErrorItem[]
+
+    constructor(readonly statusCode: number, issue?: string | HttpError.ErrorItem[]) {
+        super(getHttpStatusMessage(statusCode), false);
         this.statusCode = statusCode;
-        this.errorItems = errorItems;
+        if (typeof issue === "string") {
+            this.issues = [{ message: issue }];
+        }
+        else {
+            this.issues = issue;
+        }
     }
 
-    toJson(): object {
-        const appErrorJson = super.toJson()
-        const json = {
-            ...appErrorJson,
-            name: this.name,
-            statusCode: this.statusCode,
-            errorItems: this.errorItems,
-        };
-        return json;
+    flatten(): string[] {
+        return this.issues?.map(iss => iss.message) ?? [];
     }
 }
 
@@ -34,29 +34,36 @@ export namespace HttpError {
 
     export class BadRequest extends HttpError {
 
-        constructor(message: string | null, errorItems?: HttpError.ErrorItem[]) {
-            super(404, message, errorItems);
-        }
-    }
-
-    export class NotFound extends HttpError {
-
-        constructor(message?: string) {
-            super(404, message)
-        }
-    }
-
-    export class Conflict extends HttpError {
-
-        constructor(message?: string) {
-            super(409, message)
+        constructor(issue?: string | HttpError.ErrorItem[]) {
+            super(400, issue);
         }
     }
 
     export class Forbidden extends HttpError {
 
-        constructor(message?: string) {
-            super(403, message)
+        constructor(issue?: string | HttpError.ErrorItem[]) {
+            super(403, issue);
+        }
+    }
+
+    export class NotFound extends HttpError {
+
+        constructor(issue?: string | HttpError.ErrorItem[]) {
+            super(404, issue);
+        }
+    }
+
+    export class Conflict extends HttpError {
+
+        constructor(issue?: string | HttpError.ErrorItem[]) {
+            super(409, issue);
+        }
+    }
+
+    export class ServerError extends HttpError {
+
+        constructor(issue?: string | HttpError.ErrorItem[]) {
+            super(500, issue);
         }
     }
 }

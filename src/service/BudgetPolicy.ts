@@ -1,7 +1,6 @@
 import { HttpError } from "../core/HttpError.js";
-import { BudgetRepo } from "../data/BudgetRepo.js";
+import { logDebug } from "../core/Logger.js";
 import { LookupRepo } from "../data/LookupRepo.js";
-import { ParticipantRepo } from "../data/ParticipantRepo.js";
 import { RepoFactory } from "../data/RepoFactory.js";
 
 const MAX_PARTICIPANT_PER_BUDGET = 10;
@@ -18,6 +17,7 @@ export enum BudgetPolicyErrorCode {
     NOT_PARTICIPANT = "NOT_PARTICIPANT",
     PARTICIPANT_LIMIT_REACHED = "PARTICIPANT_LIMIT_REACHED",
     NOT_CREATOR = "NOT_CREATOR",
+    NOT_CREATOR_OF_BUDGET = "NOT_CREATOR_OF_BUDGET",
 }
 
 export class BudgetPolicy {
@@ -40,8 +40,8 @@ export class BudgetPolicy {
     }
 
     private async isBudgetCreatoryOrThrow(budgetId: string, userId: string) {
-        if (!await this.lookup.isCategoryOfBudget(budgetId,userId)) {
-            throw new HttpError.Forbidden(BudgetPolicyErrorCode.NOT_CATEGORY_OF_BUDGET);
+        if (!await this.lookup.isCreatorOfBudget(budgetId,userId)) {
+            throw new HttpError.Forbidden(BudgetPolicyErrorCode.NOT_CREATOR_OF_BUDGET);
         }
     }
 
@@ -113,7 +113,9 @@ export class BudgetPolicy {
         }
     }
 
-    async canRemoveParticipant(budgetId: string, participantId: string, actorId: string,) {
+    async canRemoveParticipant(budgetId: string, actorId: string, participantId: string, ) {
+
+        logDebug("canRemoveParticipant", { budgetId, actorId, participantId });
 
         // budget must exists 
         await this.budgetExistsOrThrow(budgetId);

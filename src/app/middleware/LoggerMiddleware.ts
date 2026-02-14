@@ -4,7 +4,7 @@ import { generateUUID } from "../../core/Helpers.js";
 import { globalLogger, Logger } from "../../core/Logger.js";
 
 export function httpLogger(): RequestHandler {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (request: Request, response: Response, next: NextFunction) => {
         const logger = pinoHttp({
             logger: globalLogger.logger,
 
@@ -14,13 +14,14 @@ export function httpLogger(): RequestHandler {
                 req: (req: Request): any => ({
                     id: req.id,
                     url: req.url,
-                    method: req.method
+                    method: req.method,
+                    userId: req.userId,
                 }),
             }
         });
 
-        req.logger = new Logger(logger.logger);
+        request.logger = new Logger(logger.logger);
 
-        logger(req,res,next);
+        logger(request,response,next);
     }
 }

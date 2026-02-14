@@ -8,8 +8,12 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node", "express"],
-    "allowImportingTsExtensions": false
+    "typeRoots": [
+      "node_modules/@types",
+      "src/type"
+    ],
+    
+    "allowImportingTsExtensions": false,
   },
-  "include": ["src", "types"]
+  "include": ["src"]
 }

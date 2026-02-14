@@ -19,3 +19,4 @@ export type Expense = typeof expenses.$inferSelect;
 export type UpdateExpenseModel = Partial<Pick<Expense, "date" | "amount" | "note">>;
 
 export type Event = typeof events.$inferSelect;
+
