@@ -12,12 +12,12 @@ const EpochMillis = z.number().int().nonnegative();
 const DecimalString = z.string().regex(/^\d+(\.\d+)?$/);
 
 
-export const CreateBudgetSchema = z.object({
+export const PostBudgetBodySchema = z.object({
   id: z.string().nonempty(),
   title: z.string().nonempty(),
   details: z.string().optional(),
   lastModified: z.number().int().nonnegative(),
-}).strict();
+});
 
 
 /**
@@ -29,14 +29,14 @@ const EditBudgetEventSchema = z.object({
   details: z.string().optional(),
   version: NonNegativeInt,
   lastModified: EpochMillis,
-}).strict();
+});
 
 
 const DeleteBudgetEventSchema = z.object({
   event: z.literal(EventType.DELETE_BUDGET),
   version: NonNegativeInt,
   lastModified: EpochMillis,
-}).strict();
+});
 
 const AddCategoryEventSchema = z.object({
   event: z.literal(EventType.ADD_CATEGORY),
@@ -44,23 +44,23 @@ const AddCategoryEventSchema = z.object({
   name: NonEmptyString,
   allocate: DecimalString,
   lastModified: EpochMillis,
-}).strict();
+});
 
 const EditCategoryEventSchema = z.object({
   event: z.literal(EventType.EDIT_CATEGORY),
   id: NonEmptyString,
   name: z.string().optional(),
-  amount: DecimalString.optional(),
+  allocate: DecimalString.optional(),
   version: NonNegativeInt,
   lastModified: EpochMillis,
-}).strict();
+});
 
 const DeleteCategoryEventSchema = z.object({
   event: z.literal(EventType.DELETE_CATEGORY),
   id: NonEmptyString,
   version: NonNegativeInt,
   lastModified: EpochMillis,
-}).strict();
+});
 
 const AddExpenseEventSchema = z.object({
   event: z.literal(EventType.ADD_EXPENSE),
@@ -70,25 +70,24 @@ const AddExpenseEventSchema = z.object({
   amount: DecimalString,
   note: z.string().optional(),
   lastModified: EpochMillis,
-}).strict();
+});
 
 const EditExpenseEventSchema = z.object({
   event: z.literal(EventType.EDIT_EXPENSE),
   id: NonEmptyString,
-  categoryId: NonEmptyString,
   date: z.iso.date().optional(),
   amount: DecimalString.optional(),
   note: z.string().optional(),
   version: NonNegativeInt,
   lastModified: EpochMillis,
-}).strict();
+});
 
 const DeleteExpenseEventSchema = z.object({
   event: z.literal(EventType.DELETE_EXPENSE),
   id: NonEmptyString,
   version: NonNegativeInt,
   lastModified: EpochMillis,
-}).strict();
+});
 
 /**
  * Discriminated union: a single event
@@ -107,7 +106,7 @@ export const EventSchema = z.discriminatedUnion("event", [
 /**
  * Batch schema: 1–25 events
  */
-export const CreateEventsBodySchema = z.object({
+export const PostEventsBodySchema = z.object({
   events: z.array(z.looseObject({
     event: z.string(),
     lastModified: EpochMillis
@@ -117,18 +116,21 @@ export const CreateEventsBodySchema = z.object({
 
 // Query schema for fetching sync events
 export const GetEventsQuerySchema = z.object({
-    key: z.coerce.number().int().positive().optional(),
+  key: z.coerce.number().int().positive().optional(),
   count: z.coerce.number().int().positive().optional(),
-}).strict();
+});
 
 export const SnapShotQuerySchema = z.object({
   entity: z.enum(["budget", "participant", "category", "expense"]),
   key: z.coerce.number().int().positive().optional(),
   count: z.coerce.number().int().positive().optional(),
-}).strict();
+});
 
 export const GetBudgetsQuerySchema = z.object({
   key: z.coerce.number().int().positive().optional(),
   count: z.coerce.number().int().positive().optional(),
-}).strict();
+});
 
+// export const DeleteBudgetQuerySchema = z.object({
+//   version: z.coerce.number().int().positive()
+// });

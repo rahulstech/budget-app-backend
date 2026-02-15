@@ -4,9 +4,11 @@ import express, { Express, Request, Response, NextFunction } from "express";
 import { HttpError } from "../core/HttpError.js";
 import { httpLogger } from "./middleware/LoggerMiddleware.js";
 import { checkApiKey, extractUserId } from "./middleware/SecurityMiddleware.js";
+import { userRouter } from "./router/UserRouter.js";
+import { UserService } from "../service/UserService.js";
 
 
-export function createApp(budgetService: BudgetService): Express {
+export function createApp(budgetService: BudgetService, userService: UserService): Express {
     const app: Express = express();
 
     app.use(checkApiKey());
@@ -19,6 +21,7 @@ export function createApp(budgetService: BudgetService): Express {
 
     app.use((req: Request, _res: Response, next: NextFunction)=> {
         req.budgetService = budgetService;
+        req.userService = userService;
         next();
     });
 
@@ -26,6 +29,8 @@ export function createApp(budgetService: BudgetService): Express {
      * app routes
      */
     app.use(budgetRouter);
+
+    app.use(userRouter);
 
     /**
      * 404 NOT FOUND handler

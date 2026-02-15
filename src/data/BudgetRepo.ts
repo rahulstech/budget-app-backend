@@ -1,4 +1,4 @@
-import { Budget, UpdateBudgetModel } from "./Models.js";
+import { Budget, SelectBudgetModel, UpdateBudgetModel, } from "./Models.js";
 
 export interface BudgetRepo {
 
@@ -6,7 +6,7 @@ export interface BudgetRepo {
 
   getBudgetById(id: string): Promise<Budget | null>
 
-  getBudgetsOfParticipant(userId: string, limit: number, offset: number): Promise<Omit<Budget,"serverCreatedAt"|"createdBy">[]>
+  getBudgetsOfParticipant(userId: string, limit: number, offset: number): Promise<SelectBudgetModel[]>
   
   updateBudget(id: string, budget: UpdateBudgetModel, expectedVersion: number, lastModified: number): Promise<Budget>
   

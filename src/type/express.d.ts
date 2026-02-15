@@ -1,5 +1,6 @@
 import type { BudgetService } from "../../service/BudgetService.ts";
 import { Logger } from "../core/Logger.ts";
+import { UserService } from "../service/UserService.ts";
 
 declare global {
     namespace Express {
@@ -18,6 +19,8 @@ declare global {
             }
             
             budgetService: BudgetService,
+
+            userService: UserService,
 
             userId: string,
 

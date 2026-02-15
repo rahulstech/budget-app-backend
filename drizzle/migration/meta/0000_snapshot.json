@@ -1,5 +1,5 @@
 {
-  "id": "9f57e0df-c4a5-4840-b26a-141892d54dac",
+  "id": "9f231aa2-2149-4d0d-9a81-8ee6e9a6a546",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -25,6 +25,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "server_created_at": {
           "name": "server_created_at",
@@ -167,12 +174,6 @@
         "type": {
           "name": "type",
           "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "when": {
-          "name": "when",
-          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
@@ -342,6 +343,37 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

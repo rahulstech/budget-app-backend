@@ -1,9 +1,9 @@
 import { createApp } from "./app/App.js";
-import { budgetService } from "./app/ServiceProvider.js";
+import { budgetService, userService } from "./app/ServiceProvider.js";
 
 const SERVER_PORT = 3000;
 
-const app = createApp(budgetService);
+const app = createApp(budgetService, userService);
 
 app.listen(SERVER_PORT, (error?: Error)=> {
     if (error) {

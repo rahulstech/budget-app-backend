@@ -2,10 +2,9 @@ import { HttpError } from "../../core/HttpError.js";
 import { BudgetService } from "../../service/BudgetService.js";
 import { CreateBudgetDto, EventDto } from "../../service/Dtos.js";
 import { EventType } from "../../core/Types.js";
-import { EventSchema } from "../middleware/ValidationSchemas.js";
+import { EventSchema } from "../middleware/BudgetValidationSchemas.js";
 import { logError } from "../../core/Logger.js";
-import { ControllerParams, CreateEventsBodyModel, EventRequestModel, EventResponseModel, SyncResponseModel } from "../Types.js";
-import { toBudgetDto, toCategoryDto, toExpenseDto } from "../../service/Mappers.js";
+import { ControllerParams, EventBodyModel, ResponseModel, PostEventsBodyModel } from "../Types.js";
 import { mapZodErrorToHttpError } from "../../core/Mappers.js";
 
 /**
@@ -30,18 +29,27 @@ export async function handlePostBudget(service: BudgetService, params: Controlle
 
 
 // Append offline evnets
-export async function handlePostEvents(service: BudgetService, params: ControllerParams): Promise<{ events: EventResponseModel[] }> {
+export async function handlePostEvents(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
+
   const { body, userId, budgetId } = params;
-  return { events: await Promise.all((body as CreateEventsBodyModel).events
-    .sort((a,b) => a.lastModified - b.lastModified) // sort ascending order of lastModified
-    .map((e) => processSingleEvent(service, e, budgetId, userId))
-    )
-  };
+  const events = (body as PostEventsBodyModel).events
+    .sort((a, b) => a.lastModified - b.lastModified);
+
+  const results: ResponseModel[] = [];
+
+  // execute sequentially so that dependent event does not fail
+  for (const e of events) {
+    const res = await processSingleEvent(service, e, budgetId, userId);
+    results.push(res);
+  }
+
+  return { events: results };
 }
 
 
+
 // Sync events
-export async function handleGetEvents(service: BudgetService, params: ControllerParams): Promise<{ events: SyncResponseModel[] }> {
+export async function handleGetEvents(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
   const { userId, budgetId, key, count } = params;
   const events = await service.getEvents(budgetId, userId, key, count);
   return { events: events.map(toSyncResponseModel) };
@@ -68,23 +76,23 @@ export async function handleRemoveParticipant(service: BudgetService, params: Co
 
 // Get SnapShot
 export async function handleGetSnapShot(service: BudgetService, params: ControllerParams): Promise<unknown> {
-  const { budgetId, entity, key, count } = params;
+  const { budgetId, userId, entity, key, count } = params;
+
+  await service.canGetSnapShotOrThrow(budgetId,userId);
+
   switch(entity) {
     case "budget": {
-      return toBudgetDto(await service.getBudget(budgetId));
+      return await service.getBudget(budgetId);
     }
     case "participant": {
       return { participants: await service.getParticipantsOfBudget(budgetId) };
     }
     case "category": {
-      return { categories: (await service.getCategoriesOfBudget(budgetId)).map(toCategoryDto) };
+      return { categories: await service.getCategoriesOfBudget(budgetId) };
     }
     case "expense": {
       const { items } = await service.getExpensesOfBudget(budgetId, key, count);
-      return { 
-        key, 
-        expenses: items.map(toExpenseDto)
-      };
+      return { key, expenses: items };
     }
     default: {
       throw new HttpError.BadRequest("UNKNOWN_ENTITY");
@@ -95,7 +103,7 @@ export async function handleGetSnapShot(service: BudgetService, params: Controll
 
 export async function handleGetBudgetsOfParticipant(service: BudgetService, params: ControllerParams): Promise<unknown> {
   const { userId, key, count } = params;
-  const { key: page, items: budgets } = await service.getBudgetsForParticipant(userId, key, count);
+  const { key: page, items: budgets } = await service.getBudgetsOfParticipant(userId, key, count);
   return { 
     page, 
     budgets
@@ -106,12 +114,7 @@ export async function handleGetBudgetsOfParticipant(service: BudgetService, para
  * Helper Methods
  */
 
-async function processSingleEvent(
-  service: BudgetService,
-  rawEvent: any,
-  budgetId: string,
-  actorUserId: string
-): Promise<EventResponseModel> {
+async function processSingleEvent(service: BudgetService, rawEvent: any,budgetId: string, actorUserId: string): Promise<ResponseModel> {
   try {
     const validated = validateSingleEvent(rawEvent);
     return await dispatchEvent(service, validated, budgetId, actorUserId);
@@ -126,7 +129,7 @@ async function processSingleEvent(
 }
 
 
-function validateSingleEvent(rawEvent: Record<string,any>): EventRequestModel {
+function validateSingleEvent(rawEvent: Record<string,any>): EventBodyModel {
   const parsed = EventSchema.safeParse(rawEvent);
   if (!parsed.success) {
       throw mapZodErrorToHttpError(parsed.error);
@@ -136,7 +139,7 @@ function validateSingleEvent(rawEvent: Record<string,any>): EventRequestModel {
 }
 
 
-async function dispatchEvent(service: BudgetService, event: EventRequestModel, budgetId: string,actorUserId: string): Promise<EventResponseModel> {
+async function dispatchEvent(service: BudgetService, event: EventBodyModel, budgetId: string,actorUserId: string): Promise<ResponseModel> {
   try {
     const syncEvent = await callServiceForEvent(
       service,
@@ -153,7 +156,7 @@ async function dispatchEvent(service: BudgetService, event: EventRequestModel, b
 }
 
 
-async function callServiceForEvent(service: BudgetService, event: EventRequestModel, budgetId: string, actorUserId: string): Promise<EventDto> {
+async function callServiceForEvent(service: BudgetService, event: EventBodyModel, budgetId: string, actorUserId: string): Promise<EventDto> {
 
   switch (event.event) {
     case await EventType.EDIT_BUDGET:
@@ -166,13 +169,13 @@ async function callServiceForEvent(service: BudgetService, event: EventRequestMo
         lastModified: event.lastModified,
       });
 
-    case await EventType.DELETE_BUDGET:
+    case EventType.DELETE_BUDGET: 
       return service.deleteBudget({
         id: budgetId,
         actorUserId,
         version: event.version,
         lastModified: event.lastModified,
-      });
+      })
 
     case EventType.ADD_CATEGORY:
       return await service.addCategory({
@@ -190,7 +193,7 @@ async function callServiceForEvent(service: BudgetService, event: EventRequestMo
         budgetId,
         actorUserId,
         name: event.name,
-        allocate: event.amount,
+        allocate: event.allocate,
         version: event.version,
         lastModified: event.lastModified,
       });
@@ -220,7 +223,6 @@ async function callServiceForEvent(service: BudgetService, event: EventRequestMo
         id: event.id,
         budgetId,
         actorUserId,
-        categoryId: event.categoryId,
         date: event.date,
         amount: event.amount,
         note: event.note,
@@ -243,7 +245,7 @@ async function callServiceForEvent(service: BudgetService, event: EventRequestMo
 }
 
 
-function normalizeSuccess(syncEvent: EventDto): EventResponseModel {
+function normalizeSuccess(syncEvent: EventDto): ResponseModel {
   return {
     event: syncEvent.type,
     id: syncEvent.recordId,
@@ -251,7 +253,7 @@ function normalizeSuccess(syncEvent: EventDto): EventResponseModel {
   };
 }
 
-function normalizeFailure(event: any, budgetId: string, err: any): EventResponseModel {
+function normalizeFailure(event: any, budgetId: string, err: any): ResponseModel {
   if (err instanceof HttpError) {
     return {
       event: event.event,
@@ -269,9 +271,9 @@ function normalizeFailure(event: any, budgetId: string, err: any): EventResponse
   };
 }
 
-function toSyncResponseModel(dto: EventDto): SyncResponseModel {
+function toSyncResponseModel(dto: EventDto): ResponseModel {
   // base object: type, actor, when
-  let base: SyncResponseModel = {
+  let base: ResponseModel = {
     budgetId: dto.budgetId,
     actorUserId: dto.actorUserId,
     type: dto.type,

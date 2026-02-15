@@ -1,6 +1,6 @@
 import { BudgetRepo } from "../BudgetRepo.js";
 import { budgets, participants } from "../schema/Tables.js";
-import { Budget, Database, UpdateBudgetModel } from "../Models.js";
+import { Budget, Database, SelectBudgetModel, UpdateBudgetModel } from "../Models.js";
 import { and, desc, eq } from "drizzle-orm";
 import { RepoError } from "../RepoError.js";
 
@@ -18,13 +18,14 @@ export class BudgetRepoImpl implements BudgetRepo {
     return budget ?? null;
   }
 
-  async getBudgetsOfParticipant(userId: string, limit: number, offset: number): Promise<Omit<Budget,"serverCreatedAt"|"createdBy">[]> {
+  async getBudgetsOfParticipant(userId: string, limit: number, offset: number): Promise<SelectBudgetModel[]> {
     const results = await this.db.select({
       id: budgets.id,
       title: budgets.title,
       details: budgets.details,
       version: budgets.version,
-      offlineLastModified: budgets.offlineLastModified
+      offlineLastModified: budgets.offlineLastModified,
+      createdBy: budgets.createdBy
     })
       .from(budgets)
       .innerJoin(participants, eq(budgets.id, participants.budgetId))
@@ -47,8 +48,6 @@ export class BudgetRepoImpl implements BudgetRepo {
       })
       .where(and(eq(budgets.id, id), eq(budgets.version, expectedVersion)))
       .returning();
-
-      console.log("row: ", row);
 
     if (!row) {
       // no rows updated -> version mismatch or not found

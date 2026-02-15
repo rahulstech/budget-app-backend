@@ -17,6 +17,16 @@ export class Logger {
             formatters: {
                 level: (label, _) => ({ label })
             },
+
+            transport: process.env.NODE_ENV === "dev" ? 
+            {
+                target: "pino-pretty",
+                options: {
+                    colorize: true,
+                    translateTime: "SYS:standard",
+                    ignore: "pid,hostname",
+                }
+            } : undefined,
         };
         return pino(option);
     }
@@ -63,7 +73,7 @@ export class Logger {
     }
 
     error(message: string, context?: LogContext) {
-        this.log("fatal",message,context);
+        this.log("error",message,context);
     }
 
     warn(message: string, context?: LogContext) {

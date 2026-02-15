@@ -1,13 +1,19 @@
-import { Router, Request, NextFunction, Response } from "express";
+import { Router, Request, Response } from "express";
 import { handlePostBudget, handleRemoveParticipant } from "../controller/BudgetController.js";
-import { CreateBudgetSchema, CreateEventsBodySchema, GetBudgetsQuerySchema, GetEventsQuerySchema, SnapShotQuerySchema } from "../middleware/ValidationSchemas.js";
+import {  GetBudgetsQuerySchema, GetEventsQuerySchema, PostBudgetBodySchema, PostEventsBodySchema, SnapShotQuerySchema } from "../middleware/BudgetValidationSchemas.js";
 import { handleGetBudgetsOfParticipant, handleGetEvents, handleGetSnapShot, handleJoinPartcipant, 
   handleLeavePariticipant, handlePostEvents } from "../controller/BudgetController.js";
 import { validateBody, validateQuery } from "../middleware/Validators.js";
 import { asyncHandler } from "../Helper.js";
 
-function buildRoute(end: string): string {
-  return `/budgets/:budgetId/${end}`;
+function buildRoute(...segments: string[]): string {
+  let route = "/budgets/:budgetId";
+  if (segments.length > 0) {
+    for (const s of segments) {
+      route += `/${s}`;
+    }
+  }
+  return route;
 }
 
 export const budgetRouter = Router();
@@ -16,7 +22,7 @@ export const budgetRouter = Router();
 // Create a budget (handler implemented in controller)
 budgetRouter.post(
   "/budget",
-  validateBody(CreateBudgetSchema, "INVALID_CREATE_BUDGET_REQUEST"),
+  validateBody(PostBudgetBodySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const body = req.validatedBody;
     const userId = req.userId;
@@ -43,7 +49,7 @@ budgetRouter.get("/budgets",
 
 // Push sync events for a budget
 budgetRouter.post(buildRoute("events"), 
-  validateBody(CreateEventsBodySchema),
+  validateBody(PostEventsBodySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.userId;
     const budgetId = req.params.budgetId as string;
@@ -77,11 +83,12 @@ budgetRouter.get(
 budgetRouter.get(buildRoute("snapshot"),
   validateQuery(SnapShotQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.userId;
     const {budgetId} = req.params;
     const service = req.budgetService;
     const { entity, key, count } = req.validatedQuery as any;
     
-    const results = await handleGetSnapShot(service, { budgetId, entity, key, count });
+    const results = await handleGetSnapShot(service, { budgetId, userId, entity, key, count });
 
     res.json(results);
 }));
@@ -113,7 +120,7 @@ budgetRouter.delete(buildRoute("leave"),
   }));
 
 // remove a participant from budget
-budgetRouter.delete(buildRoute("participants/:participantId"), 
+budgetRouter.delete(buildRoute("participants",":participantId"), 
   asyncHandler(async (req: Request, res: Response) => {
     const { budgetId, participantId } = req.params;
     const userId = req.userId;

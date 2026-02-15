@@ -1,1 +1,0 @@
-ALTER TABLE "accepted_events" DROP COLUMN "when";

@@ -20,3 +20,6 @@ export type PagedResult<K,T> = {
   items: T[],
 }
 
+export type Nullable<T> = {
+  [k in keyof T]: T[k] | null;
+}

@@ -10,14 +10,19 @@ export class LookupRepoImpl implements LookupRepo {
 
   /* ================= Budget ================= */
 
-  async budgetExists(budgetId: string): Promise<boolean> {
-    const row = await this.db
-      .select({ id: budgets.id })
+  async budgetExists(budgetId: string, ignoreDeleted: boolean = false): Promise<boolean> {
+    const [budget] = await this.db
+      .select({ isDeleted: budgets.isDeleted })
       .from(budgets)
       .where(eq(budgets.id, budgetId))
       .limit(1)
 
-    return row.length > 0
+    if (budget) {
+      console.log(budget);
+      return ignoreDeleted || !budget.isDeleted;
+    }
+
+    return false;
   }
 
   async isCreatorOfBudget(budgetId: string, userId: string): Promise<boolean> {
@@ -47,10 +52,7 @@ export class LookupRepoImpl implements LookupRepo {
     return row.length > 0
   }
 
-  async isCategoryOfBudget(
-    budgetId: string,
-    categoryId: string
-  ): Promise<boolean> {
+  async isCategoryOfBudget(budgetId: string,categoryId: string): Promise<boolean> {
     const row = await this.db
       .select({ id: categories.id })
       .from(categories)
@@ -62,7 +64,7 @@ export class LookupRepoImpl implements LookupRepo {
       )
       .limit(1)
 
-    return row.length > 0
+    return row.length > 0;
   }
 
   /* ================= Expense ================= */
@@ -119,6 +121,11 @@ export class LookupRepoImpl implements LookupRepo {
     .orderBy(desc(events.serverCreatedAt))
     .limit(1);
 
+    if (!resultLastAdded) {
+      // not an participant
+      return false;
+    }
+
     const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.serverCreatedAt }).from(events)
     .where(and(
       eq(events.budgetId, budgetId),
@@ -128,13 +135,10 @@ export class LookupRepoImpl implements LookupRepo {
     .orderBy(desc(events.serverCreatedAt))
     .limit(1);
 
-    if (!resultLastAdded) {
-      // not an participant
-      return false;
-    }
     if (!resultLastRemoved) {
       return resultLastAdded.whenLastAdded <= atMillis;
     }
+
     return resultLastRemoved.whenLastRemoved < resultLastAdded.whenLastAdded 
               && resultLastAdded.whenLastAdded <= atMillis;
   }

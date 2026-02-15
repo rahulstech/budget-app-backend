@@ -19,14 +19,4 @@ export class ParticipantRepoImpl implements ParticipantRepo {
             eq(participants.userId, userId))
         );
     }
-
-    async getBudgetParticipants(budgetId: string): Promise<string[]> {
-        const rows = await this.db.select({
-            userId: participants.userId
-        })
-            .from(participants)
-            .where(eq(participants.budgetId, budgetId));
-
-        return rows.map(p => p.userId);
-    }
 }

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, bigint, integer, numeric, json, index, primaryKey, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, bigint, integer, numeric, json, index, primaryKey, date, boolean } from "drizzle-orm/pg-core";
 
 const CommonFields = {
 
@@ -24,6 +24,8 @@ export const budgets = pgTable("budgets", {
   title: text("title").notNull(),
 
   details: text("details"),
+
+  isDeleted: boolean("is_deleted").notNull().default(false),
 
   ...CommonFields,
 });
@@ -111,3 +113,14 @@ export const events = pgTable("accepted_events", {
 }, (table) => [
   index("idx_accepted_events_budgetId_userId").on(table.budgetId, table.userId)
 ]);
+
+
+
+
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+
+  firstName: text("first_name").notNull(),
+
+  lastName: text("last_name"),
+})

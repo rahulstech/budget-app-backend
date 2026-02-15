@@ -1,6 +1,6 @@
 export interface LookupRepo {
     
-  budgetExists(budgetId: string): Promise<boolean>
+  budgetExists(budgetId: string, ignoreDeleted: boolean): Promise<boolean>
 
   categoryExists(categoryId: string): Promise<boolean>
 

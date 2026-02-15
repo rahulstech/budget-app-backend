@@ -4,13 +4,18 @@ import { RepoFactory } from "../data/RepoFactory.js";
 import { BudgetPolicy } from "./BudgetPolicy.js";
 import { AddCategoryDto, AddExpenseDto, AddParticipantDto, CreateBudgetDto, DeleteBudgetDto,
      DeleteCategoryDto, DeleteExpenseDto, EditBudgetDto, EditCategoryDto, EditExpenseDto, 
-     RemoveParticipantDto, EventDto, 
-     ParticipantUser} from "./Dtos.js";
+     RemoveParticipantDto, EventDto,
+     BudgetDto,
+     CategoryDto,
+     ExpenseDto,
+     ParticipantDto} from "./Dtos.js";
 import { EventBuilder, toEventDto, toParticipant,
-     toCategory, toExpense, toBudget } from "./Mappers.js";
+     toCategory, toExpense, toBudget, 
+     toBudgetDto,
+     toCategoryDto,
+     toExpenseDto} from "./Mappers.js";
 import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
-import { Budget, Category, Expense, Participant } from "../data/Models.js";
 import { PagedResult } from "../core/Types.js";
 import { BudgetRepo } from "../data/BudgetRepo.js";
 
@@ -26,6 +31,10 @@ export class BudgetService {
         const factory = client.getRepoFactory();
         this.policy = new BudgetPolicy(factory);
         this.budgetRepo = factory.createBudgetRepo();
+    }
+
+    async canGetSnapShotOrThrow(budgetId: string, userId: string): Promise<void> {
+        await this.policy.canGetSnapShort(budgetId,userId);
     }
 
     /**
@@ -73,20 +82,20 @@ export class BudgetService {
         });
     }
 
-    async getBudget(budgetId: string): Promise<Budget> {
+    async getBudget(budgetId: string): Promise<BudgetDto> {
         const budgetRepo = this.client.getRepoFactory().createBudgetRepo();
         const budget = await budgetRepo.getBudgetById(budgetId);
         if (null === budget) {
             throw new HttpError.NotFound();
         }
-        return budget;
+        return toBudgetDto(budget);
     }
 
-    async getBudgetsForParticipant(userId: string, key: number, count: number): Promise<PagedResult<number, Omit<Budget, "serverCreatedAt"|"createdBy">>> {
+    async getBudgetsOfParticipant(userId: string, key: number, count: number): Promise<PagedResult<number, BudgetDto>> {
         const limit = Math.min(count, 100); // hard cap
         const offset = (key-1)*limit;
         const items = await this.budgetRepo.getBudgetsOfParticipant(userId, limit, offset);
-        return { key, items };
+        return { key, items: items.map(b => toBudgetDto(b as any)) };
     }
 
     /**
@@ -147,7 +156,7 @@ export class BudgetService {
      * - Sync event recorded
      */
     async deleteBudget(dto: DeleteBudgetDto): Promise<EventDto> {
-        // policy: existence + creator check
+        // check policy
         await this.policy.canDeleteBudget(dto.id, dto.actorUserId);
 
         return this.client.runInTransaction(async (factory) => {
@@ -155,11 +164,14 @@ export class BudgetService {
             const eventRepo = factory.createEventRepo();
 
             try {
-                // delete budget (hard or soft handled by repo)
-                await budgetRepo.deleteBudget(dto.id, dto.version);
+                // mark the budget deleted
+                const budget = await budgetRepo.updateBudget(dto.id, { isDeleted: true }, dto.version, Date.now());
 
                 // record sync event (intent + authority)
-                const event = await eventRepo.insertEvent(EventBuilder.deleteBudget(dto));
+                const event = await eventRepo.insertEvent(EventBuilder.deleteBudget({
+                    ...dto,
+                    version: budget.version
+                }));
 
                 return toEventDto(event);
             }
@@ -197,10 +209,13 @@ export class BudgetService {
         });
     }
 
-    async getParticipantsOfBudget(budgetId: string): Promise<ParticipantUser[]> {
-        const repo = this.client.getRepoFactory().createParticipantRepo();
-        const results = await repo.getBudgetParticipants(budgetId);
-        return results.map(id => ({ id }));
+    async getParticipantsOfBudget(budgetId: string): Promise<ParticipantDto[]> {
+        const repo = this.client.getRepoFactory().createUserRepo();
+        const results = await repo.getParticipantUsers(budgetId);
+        return results.map(p => ({
+            ...p,
+            id: p.id!,
+        }));
     }
 
     /**
@@ -258,6 +273,7 @@ export class BudgetService {
      * - Sync event recorded
      */
     async addCategory(dto: AddCategoryDto): Promise<EventDto> { 
+
          // is event allowed?
         await this.policy.canAddCategory(dto.budgetId, dto.actorUserId, dto.lastModified, dto.id);
 
@@ -281,10 +297,10 @@ export class BudgetService {
         })
     }
 
-    async getCategoriesOfBudget(budgetId: string): Promise<any[]> {
+    async getCategoriesOfBudget(budgetId: string): Promise<CategoryDto[]> {
         const categoryRepo = this.client.getRepoFactory().createCategoryRepo();
         const result = await categoryRepo.getBudgetCategories(budgetId);
-        return result;
+        return result.map(c => toCategoryDto(c as any));
     }
 
     /**
@@ -407,12 +423,12 @@ export class BudgetService {
         });
     }
 
-    async getExpensesOfBudget(budgetId: string, key: number, count: number): Promise<PagedResult<number,any>> {
+    async getExpensesOfBudget(budgetId: string, key: number, count: number): Promise<PagedResult<number,ExpenseDto>> {
         const limit = Math.min(count, MAX_RESULTS);
         const offset = (key-1)*limit;
         const expenseRepo = this.client.getRepoFactory().createExpenseRepo();
         const items = await expenseRepo.getExpenses(budgetId,limit,offset);
-        return { key, items };
+        return { key, items: items.map(e => toExpenseDto(e as any)) };
     }
 
     /**
@@ -430,7 +446,6 @@ export class BudgetService {
      * - Sync event recorded
      */
     async editExpense(dto: EditExpenseDto): Promise<EventDto> {
-        
         // policy check
         await this.policy.canEditExpense(dto.budgetId, dto.actorUserId, dto.lastModified, dto.id);
 
@@ -484,8 +499,6 @@ export class BudgetService {
             const expenseRepo = factory.createExpenseRepo();
             const eventRepo = factory.createEventRepo();
 
-            
-
             try {
                 // delete
                 await expenseRepo.deleteExpense(dto.id, dto.version);
@@ -517,9 +530,15 @@ export class BudgetService {
      *
      * Returns an array of EventDto
      */
-    async getEvents(budgetId: string, userId: string, lastSequence: number, itemCount: number): Promise<EventDto[]> {
+    async getEvents(budgetId: string, userId: string, key: number = 0, count: number = MAX_RESULTS): Promise<EventDto[]> {
+
+        await this.policy.canSyncEvents(budgetId,userId);
+        
         return this.client.runInTransaction(async (factory) => {
             const eventRepo = factory.createEventRepo();
+
+            const lastSequence = Math.max(0,key);
+            const itemCount = Math.min(MAX_RESULTS, count);
 
             // retrieve events from repo (exclude events generated by requesting user)
             const events = await eventRepo.getBudgetEvents(budgetId, userId, lastSequence, itemCount);

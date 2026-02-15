@@ -33,9 +33,9 @@ export class BudgetPolicy {
        ========================================================= */
 
 
-    private async budgetExistsOrThrow(budgetId: string) {
-        if (!await this.lookup.budgetExists(budgetId)) {
-            throw new HttpError.NotFound(BudgetPolicyErrorCode.BUDGET_NOT_EXISTS)
+    private async budgetExistsOrThrow(budgetId: string, ignoreDeleted: boolean = false) {
+        if (!await this.lookup.budgetExists(budgetId,ignoreDeleted)) {
+            throw new HttpError.NotFound(BudgetPolicyErrorCode.BUDGET_NOT_EXISTS);
         }
     }
 
@@ -56,7 +56,7 @@ export class BudgetPolicy {
      * Fails if a budget with the same id already exists.
      */
     async canAddBudget(budgetId: string) {
-        if (await this.lookup.budgetExists(budgetId)) {
+        if (await this.lookup.budgetExists(budgetId, false)) {
             throw new HttpError.Conflict(BudgetPolicyErrorCode.BUDGET_EXISTS)
         }
     }
@@ -237,6 +237,24 @@ export class BudgetPolicy {
 
         // must be a participant
         await this.wasParticipantOrThrow(budgetId,actorId,atTime);
+    }
+
+    async canGetSnapShort(budgetId: string, userId: string): Promise<void> {
+        await this.budgetExistsOrThrow(budgetId);
+
+        if (!await this.lookup.isParticipantOfBudget(budgetId,userId)) {
+            throw new HttpError.Forbidden(BudgetPolicyErrorCode.NOT_PARTICIPANT);
+        }
+    }
+
+    async canSyncEvents(budgetId: string, userId: string): Promise<void> {
+        // budget existed but now deleted, still participants can sync
+        await this.budgetExistsOrThrow(budgetId,true);
+
+        // non participant can not delete
+        if (!await this.lookup.isParticipantOfBudget(budgetId,userId)) {
+            throw new HttpError.Forbidden(BudgetPolicyErrorCode.NOT_PARTICIPANT);
+        }
     }
 }
 

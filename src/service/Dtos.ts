@@ -90,7 +90,6 @@ export type AddExpenseDto = {
 export type EditExpenseDto = {
     id: string,
     budgetId: string,
-    categoryId: string,
     actorUserId: string,
     date?: string,
     amount?: string,
@@ -135,14 +134,10 @@ export type RemoveParticipantDto = {
 }
 
 export type ParticipantDto = {
-    actorUserId: string,
-    budgetId: string,
-    joinedAtMillis: number,
-    leftAtMillis?: number,
-}
-
-export type ParticipantUser = {
-    id: string
+    id: string,
+    budgetId?: string,
+    firstName: string | null,
+    lastName: string | null,
 };
 
 // Event DTOs
@@ -153,4 +148,11 @@ export type EventDto = {
     recordId: string,
     actorUserId: string,
     data?: Record<string,any>,
+}
+
+// UserDto
+export type UserDto = {
+    id: string,
+    firstName: string,
+    lastName?: string,
 }

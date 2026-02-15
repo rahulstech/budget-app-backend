@@ -5,6 +5,4 @@ export interface ParticipantRepo {
     insertParticipant(participant: Participant): Promise<Participant>
     
     deleteParticipant(budgetId: string, userId: string): Promise<void>
-
-    getBudgetParticipants(budgetId: string): Promise<string[]>
 }

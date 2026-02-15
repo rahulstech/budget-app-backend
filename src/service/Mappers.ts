@@ -4,7 +4,8 @@ import { CreateBudgetDto, AddCategoryDto, AddExpenseDto, EventDto, EditExpenseDt
      AddParticipantDto, RemoveParticipantDto, 
      BudgetDto,
      CategoryDto,
-     ExpenseDto} from "./Dtos.js";
+     ExpenseDto,
+     UserDto} from "./Dtos.js";
 import { EventType } from "../core/Types.js";
 import { generateUUID } from "../core/Helpers.js";
 
@@ -62,7 +63,7 @@ export function toParticipant(dto: AddParticipantDto): Participant {
 
 // model -> dto
 
-export function toBudgetDto(budget: Budget): BudgetDto {
+export function toBudgetDto(budget: any): BudgetDto {
     const { id, createdBy, title, details, version, offlineLastModified: lastModified } = budget;
     return {
         id, 
@@ -74,17 +75,19 @@ export function toBudgetDto(budget: Budget): BudgetDto {
     }
 }
 
-export function toCategoryDto(category: Category): CategoryDto {
+export function toCategoryDto(category: any): CategoryDto {
     const { id, budgetId, createdBy, name, allocate, version, offlineLastModified: lastModified } = category;
     return {
         id, budgetId, createdBy, name, allocate, version, lastModified
     };
 }
 
-export function toExpenseDto(expense: Expense): ExpenseDto {
+export function toExpenseDto(expense: any): ExpenseDto {
     const { id, budgetId, categoryId, createdBy, date, amount, note, version, offlineLastModified: lastModified} = expense;
     return {
-        id, budgetId, categoryId, createdBy, date, amount, version, lastModified 
+        id, budgetId, categoryId, createdBy, date, amount, 
+        note: note ?? undefined, 
+        version, lastModified 
     };
 }
 
@@ -96,6 +99,15 @@ export function toEventDto(event: any): EventDto {
         actorUserId,
         recordId,
         data: data as Record<string,any>
+    };
+}
+
+export function toUserDto(user: any): UserDto {
+    const { id, firstName, lastName } = user;
+    return {
+        id,
+        firstName,
+        lastName: lastName === null ? undefined : lastName
     };
 }
 

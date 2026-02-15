@@ -13,7 +13,7 @@ export class HttpError extends AppError {
         super(getHttpStatusMessage(statusCode), false);
         this.statusCode = statusCode;
         if (typeof issue === "string") {
-            this.issues = [{ message: issue }];
+            this.issues = [issue];
         }
         else {
             this.issues = issue;
@@ -21,16 +21,17 @@ export class HttpError extends AppError {
     }
 
     flatten(): string[] {
-        return this.issues?.map(iss => iss.message) ?? [];
+        const issues = this.issues;
+        if (!issues) {
+            return [];
+        }
+        return issues;
     }
 }
 
 export namespace HttpError {
 
-    export type ErrorItem = {
-        message: string,
-        code?: string,
-    }
+    export type ErrorItem = string
 
     export class BadRequest extends HttpError {
 
