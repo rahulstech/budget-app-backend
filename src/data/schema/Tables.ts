@@ -95,6 +95,7 @@ export const events = pgTable("accepted_events", {
   // always increasing integer value per budget
   sequence: bigint("sequence_no", { mode: "number" }).notNull(),
 
+  // unixepoch when server received the event
   serverCreatedAt: bigint("created_at", { mode: "number" }).notNull(),
 
   // event associated budget
@@ -108,6 +109,9 @@ export const events = pgTable("accepted_events", {
 
   // id of the record in its table
   recordId: text("record_id").notNull(),
+
+  // unixepoch when event actually occured
+  when: bigint("when", { mode: "number" }).notNull(),
 
   data: json("data"),
 }, (table) => [

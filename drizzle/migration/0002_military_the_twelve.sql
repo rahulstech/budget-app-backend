@@ -1,0 +1,1 @@
+ALTER TABLE "accepted_events" ADD COLUMN "when" bigint NOT NULL;

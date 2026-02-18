@@ -7,7 +7,7 @@ export type CreateBudgetDto = {
     actorUserId: string,
     title: string,
     details?: string,
-    lastModified: number,
+    when: number,
 }
 
 export type EditBudgetDto = {
@@ -16,23 +16,24 @@ export type EditBudgetDto = {
     title?: string,
     details?: string,
     version: number,
-    lastModified: number,
+    when: number,
 }
 
 export type DeleteBudgetDto = {
     id: string,
     actorUserId: string,
     version: number,
-    lastModified: number,
+    when: number,
 }
 
 export type BudgetDto = {
     id: string,
-    createdBy: string,
-    title: string,
-    details?: string,
+    createdBy?: string,
+    title?: string,
+    details?: string | null,
     version: number,
-    lastModified: number,
+    offlineLastModified?: number,
+    participant?: ParticipantDto,
 }
 
 // Category DTOs
@@ -43,7 +44,7 @@ export type AddCategoryDto = {
     actorUserId: string,
     name: string,
     allocate: string,
-    lastModified: number,
+    when: number,
 }
 
 export type EditCategoryDto = {
@@ -53,7 +54,7 @@ export type EditCategoryDto = {
     name?: string,
     allocate?: string,
     version: number,
-    lastModified: number,
+    when: number,
 }
 
 export type DeleteCategoryDto = {
@@ -61,17 +62,17 @@ export type DeleteCategoryDto = {
     budgetId: string,
     actorUserId: string,
     version: number,
-    lastModified: number,
+    when: number,
 }
 
 export type CategoryDto = {
     id: string,
     budgetId: string,
+    createdBy: string,
     name: string,
     allocate: string,
     version: number,
-    lastModified: number,
-    createdBy: string,
+    offlineLastModified: number,
 }
 
 // expense DTOs
@@ -84,7 +85,7 @@ export type AddExpenseDto = {
     date: string,
     amount: string,
     note?: string,
-    lastModified: number,
+    when: number,
 }
 
 export type EditExpenseDto = {
@@ -95,7 +96,7 @@ export type EditExpenseDto = {
     amount?: string,
     note?: string,
     version: number,
-    lastModified: number,
+    when: number,
 }
 
 export type DeleteExpenseDto = {
@@ -104,7 +105,7 @@ export type DeleteExpenseDto = {
     categoryId?: string,
     actorUserId: string,
     version: number,
-    lastModified: number,
+    when: number,
 }
 
 export type ExpenseDto = {
@@ -114,9 +115,9 @@ export type ExpenseDto = {
     createdBy: string,
     date: string,
     amount: string,
-    note?: string,
+    note: string | null,
     version: number,
-    lastModified: number,
+    offlineLastModified: number,
 }
 
 // Participant DTOs
@@ -143,11 +144,13 @@ export type ParticipantDto = {
 // Event DTOs
 
 export type EventDto = {
-    type: EventType,
+    event: EventType,
+    sequence: number,
     budgetId: string,
     recordId: string,
     actorUserId: string,
-    data?: Record<string,any>,
+    when: number,
+    [k: string]: any,
 }
 
 // UserDto

@@ -25,7 +25,12 @@ export type Event = typeof events.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 
-export type ParticipantUser = Nullable<User>;
+export type ParticipantUser = {
+    id: string,
+    budgetId: string,
+    firstName: string | null,
+    lastName: string | null
+};
 
 export type UpdateUserModel = Partial<Omit<User,"id">>;
 

@@ -1,10 +1,8 @@
-// drizzle.config.ts
-import type { Config } from "drizzle-kit";
 import { configDotenv } from "dotenv";
 
 const NODE_ENV = process.env.NODE_ENV ?? "dev";
 
-const env = {};
+const env: any = {};
 
 configDotenv({ 
   path: `${NODE_ENV}.env`,
@@ -32,16 +30,11 @@ const ssl = useSSL ?
         }
         : false;
 
-export default {
-  schema: "./src/data/schema/*.ts",
-  out: "./drizzle/migration",
-  dialect: "postgresql",
-  dbCredentials: {
-    host: DB_HOST!,
-    port,
-    user: DB_USER,
-    password: DB_PASS,
-    database: DB_NAME!,
-    ssl
-  },
-} satisfies Config;
+export const DBConfig = {
+  user: DB_USER,
+  password: DB_PASS,
+  host: DB_HOST,
+  port,
+  database: DB_NAME,
+  ssl,
+}

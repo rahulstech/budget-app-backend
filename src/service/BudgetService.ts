@@ -8,7 +8,7 @@ import { AddCategoryDto, AddExpenseDto, AddParticipantDto, CreateBudgetDto, Dele
      BudgetDto,
      CategoryDto,
      ExpenseDto,
-     ParticipantDto} from "./Dtos.js";
+     ParticipantDto,} from "./Dtos.js";
 import { EventBuilder, toEventDto, toParticipant,
      toCategory, toExpense, toBudget, 
      toBudgetDto,
@@ -18,6 +18,8 @@ import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
 import { PagedResult } from "../core/Types.js";
 import { BudgetRepo } from "../data/BudgetRepo.js";
+import { Environment } from "../core/Environment.js";
+import { logInfo } from "../core/Logger.js";
 
 const MAX_RESULTS = 100;
 
@@ -51,20 +53,27 @@ export class BudgetService {
      * - Creator added as participant (joinedAt = now)
      * - Sync event recorded
      */
-    async createBudget(dto: CreateBudgetDto): Promise<EventDto> {
+    async createBudget(dto: CreateBudgetDto): Promise<BudgetDto> {
 
         await this.policy.canAddBudget(dto.id);
 
         return this.client.runInTransaction(async (factory) => {
             const budgetRepo = factory.createBudgetRepo();
             const eventRepo = factory.createEventRepo();
+            const userRepo = factory.createUserRepo();
+
+            // logInfo("BudgetService.create", { dto });
 
             try {
                 // insert budget
                 const budget = await budgetRepo.insertBudget(toBudget(dto));
 
+                // logInfo("BudgetService.create", { budget });
+
                 // insert create budget event
                 const event = await eventRepo.insertEvent(EventBuilder.createBudget(budget));
+
+                logInfo("BudgetService.create", { event });
 
                 // insert participant 
                 await this.insertParticipant(factory, {
@@ -73,8 +82,15 @@ export class BudgetService {
                     userId: budget.createdBy,
                 });
 
+                // get creator user
+                const participant = await userRepo.getUser(budget.createdBy);
+
+                // logInfo("BudgetService.create", { creatorUser });
+
+                const { id, version } = budget;
+
                 // return event
-                return toEventDto(event);
+                return toBudgetDto({ id, version }, participant!);
             }
             catch(error) {
                 throw this.mapError(error);
@@ -88,6 +104,7 @@ export class BudgetService {
         if (null === budget) {
             throw new HttpError.NotFound();
         }
+
         return toBudgetDto(budget);
     }
 
@@ -114,9 +131,9 @@ export class BudgetService {
      */
     async editBudget(dto: EditBudgetDto): Promise<EventDto> {
 
-        const { id, actorUserId, version, lastModified, title, details } = dto;
+        const { id, actorUserId, version, when, title, details } = dto;
 
-        await this.policy.canEditBudget(id, actorUserId, lastModified);
+        await this.policy.canEditBudget(id, actorUserId, when);
 
         return this.client.runInTransaction(async (factory) => {
             const budgetRepo = factory.createBudgetRepo();
@@ -128,7 +145,7 @@ export class BudgetService {
                     id,
                      { title, details } , 
                      version,
-                     lastModified
+                     when
                 );
 
                 // insert event
@@ -212,10 +229,7 @@ export class BudgetService {
     async getParticipantsOfBudget(budgetId: string): Promise<ParticipantDto[]> {
         const repo = this.client.getRepoFactory().createUserRepo();
         const results = await repo.getParticipantUsers(budgetId);
-        return results.map(p => ({
-            ...p,
-            id: p.id!,
-        }));
+        return results;
     }
 
     /**
@@ -275,7 +289,7 @@ export class BudgetService {
     async addCategory(dto: AddCategoryDto): Promise<EventDto> { 
 
          // is event allowed?
-        await this.policy.canAddCategory(dto.budgetId, dto.actorUserId, dto.lastModified, dto.id);
+        await this.policy.canAddCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
         return this.client.runInTransaction(async (factory) => {
             const categoryRepo = factory.createCategoryRepo();
@@ -321,16 +335,16 @@ export class BudgetService {
     async editCategory(dto: EditCategoryDto): Promise<EventDto> {
         
         // is event allowed?
-        await this.policy.canEditCategory(dto.budgetId, dto.actorUserId, dto.lastModified, dto.id);
+        await this.policy.canEditCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
         return this.client.runInTransaction(async (factory) => {
             const categoryRepo = factory.createCategoryRepo();
             const eventRepo = factory.createEventRepo();
-            const { id, name, allocate, version: expectedVersion, lastModified: newLastModified } = dto
+            const { id, name, allocate, version: expectedVersion, when: newwhen } = dto
             
             try {
                 // update category
-                const category = await categoryRepo.updateCategory(id, {name,allocate}, expectedVersion, newLastModified);
+                const category = await categoryRepo.updateCategory(id, {name,allocate}, expectedVersion, newwhen);
 
                 // insert sync event
                 const event = await eventRepo.insertEvent(EventBuilder.editCategory(dto, category.version));
@@ -360,7 +374,7 @@ export class BudgetService {
      */
     async deleteCategory(dto: DeleteCategoryDto): Promise<EventDto> {
         // is event allowed?
-        await this.policy.canDeleteCategory(dto.budgetId, dto.actorUserId, dto.lastModified);
+        await this.policy.canDeleteCategory(dto.budgetId, dto.actorUserId, dto.when);
 
         return this.client.runInTransaction(async (factory) => {
             const categoryRepo = factory.createCategoryRepo();
@@ -402,7 +416,7 @@ export class BudgetService {
      */
     async addExpense(dto: AddExpenseDto): Promise<EventDto> {
         // check policy
-        await this.policy.canAddExpense(dto.budgetId, dto.actorUserId, dto.lastModified,  dto.id, dto.categoryId);
+        await this.policy.canAddExpense(dto.budgetId, dto.actorUserId, dto.when,  dto.id, dto.categoryId);
 
         return this.client.runInTransaction(async (factory) => {
             const expenseRepo = factory.createExpenseRepo();
@@ -447,7 +461,7 @@ export class BudgetService {
      */
     async editExpense(dto: EditExpenseDto): Promise<EventDto> {
         // policy check
-        await this.policy.canEditExpense(dto.budgetId, dto.actorUserId, dto.lastModified, dto.id);
+        await this.policy.canEditExpense(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
         return this.client.runInTransaction(async (factory) => {
             const expenseRepo = factory.createExpenseRepo();
@@ -463,7 +477,7 @@ export class BudgetService {
                         note: dto.note
                     },
                     dto.version,
-                    dto.lastModified
+                    dto.when
                 );
 
                 // record event
@@ -493,7 +507,7 @@ export class BudgetService {
      */
     async deleteExpense(dto: DeleteExpenseDto): Promise<EventDto> {
         // policy: creator-only rule
-        await this.policy.canDeleteExpense(dto.budgetId, dto.actorUserId, dto.lastModified);
+        await this.policy.canDeleteExpense(dto.budgetId, dto.actorUserId, dto.when);
 
         return this.client.runInTransaction(async (factory) => {
             const expenseRepo = factory.createExpenseRepo();
@@ -543,7 +557,6 @@ export class BudgetService {
             // retrieve events from repo (exclude events generated by requesting user)
             const events = await eventRepo.getBudgetEvents(budgetId, userId, lastSequence, itemCount);
 
-            // map to DTOs
             return events.map(toEventDto);
         });
     }
@@ -554,9 +567,13 @@ export class BudgetService {
         // insert participant
         const newParticipant = await factory.createParticipantRepo().insertParticipant(toParticipant(dto));
         
+        // logInfo("BudgetService.insertParticipant", { newParticipant });
+        
         // insert event
         const event = await factory.createEventRepo().insertEvent(EventBuilder.addParticipant(dto.actorUserId, newParticipant));
         
+        // logInfo("BudgetService.insertParticipant", { event });
+
         return toEventDto(event);
     }
     

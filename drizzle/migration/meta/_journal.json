@@ -15,6 +15,13 @@
       "when": 1771155440758,
       "tag": "0001_nappy_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771339523152,
+      "tag": "0002_military_the_twelve",
+      "breakpoints": true
     }
   ]
 }

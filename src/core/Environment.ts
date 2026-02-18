@@ -3,7 +3,7 @@ import { AppError } from "./AppError.js";
 
 const EnvSchema = z.object({
     NODE_ENV: z.enum(["dev","prod","test"]).default("dev"),
-
+    BASE_URL: z.url(),
     DB_USER: z.string(),
     DB_PASS: z.string(),
     DB_HOST: z.hostname(),

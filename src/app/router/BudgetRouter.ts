@@ -1,10 +1,8 @@
 import { Router, Request, Response } from "express";
-import { handlePostBudget, handleRemoveParticipant } from "../controller/BudgetController.js";
-import {  GetBudgetsQuerySchema, GetEventsQuerySchema, PostBudgetBodySchema, PostEventsBodySchema, SnapShotQuerySchema } from "../middleware/BudgetValidationSchemas.js";
-import { handleGetBudgetsOfParticipant, handleGetEvents, handleGetSnapShot, handleJoinPartcipant, 
-  handleLeavePariticipant, handlePostEvents } from "../controller/BudgetController.js";
-import { validateBody, validateQuery } from "../middleware/Validators.js";
+import { GetBudgetsQuerySchema, PostBudgetBodySchema, SnapShotQuerySchema } from "../middleware/BudgetValidationSchemas.js";
 import { asyncHandler } from "../Helper.js";
+import { validateBody, validateQuery } from "../middleware/Validators.js";
+import { handleGetBudgetsOfParticipant, handleGetSnapShot, handleJoinPartcipant, handleLeavePariticipant, handlePostBudget, handleRemoveParticipant } from "../controller/BudgetController.js";
 
 function buildRoute(...segments: string[]): string {
   let route = "/budgets/:budgetId";
@@ -47,44 +45,12 @@ budgetRouter.get("/budgets",
   })
 )
 
-// Push sync events for a budget
-budgetRouter.post(buildRoute("events"), 
-  validateBody(PostEventsBodySchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.userId;
-    const budgetId = req.params.budgetId as string;
-    const service = req.budgetService;
-    const body = req.body;
-
-    const results = await handlePostEvents(service, { body, budgetId, userId });
-
-    res.json(results);
-  }));
-
-
-// Fetch sync events for a budget (handled in controller)
-budgetRouter.get(
-  buildRoute("events"),
-  validateQuery(GetEventsQuerySchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const {budgetId} = req.params;
-    const userId = req.userId;
-    const { key, count } = req.validatedQuery as any;
-    const service = req.budgetService;
-
-    const results = await handleGetEvents(service, { budgetId, userId, key, count });
-
-    res.json(results);
-  }));
-
-
-
 // Get latest snapshot for a budget
-budgetRouter.get(buildRoute("snapshot"),
+budgetRouter.get(buildRoute("snapshot",":entity"),
   validateQuery(SnapShotQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.userId;
-    const {budgetId} = req.params;
+    const { budgetId } = req.params;
     const service = req.budgetService;
     const { entity, key, count } = req.validatedQuery as any;
     

@@ -6,6 +6,7 @@ import { httpLogger } from "./middleware/LoggerMiddleware.js";
 import { checkApiKey, extractUserId } from "./middleware/SecurityMiddleware.js";
 import { userRouter } from "./router/UserRouter.js";
 import { UserService } from "../service/UserService.js";
+import { eventRouter } from "./router/EventRouter.js";
 
 
 export function createApp(budgetService: BudgetService, userService: UserService): Express {
@@ -29,6 +30,8 @@ export function createApp(budgetService: BudgetService, userService: UserService
      * app routes
      */
     app.use(budgetRouter);
+
+    app.use(eventRouter);
 
     app.use(userRouter);
 

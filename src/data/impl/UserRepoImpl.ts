@@ -27,23 +27,16 @@ export class UserRepoImpl implements UserRepo {
 
     async getParticipantUsers(budgetId: string): Promise<ParticipantUser[]> {
         const rows = await this.db.select({
-            userId: participants.userId,
-            user: users
+            id: participants.userId,
+            budgetId: participants.budgetId,
+            firstName: users.firstName,
+            lastName: users.lastName
         })
             .from(participants)
             .leftJoin(users, eq(participants.userId, users.id))
             .where(eq(participants.budgetId, budgetId));
 
-        return rows.map(r => {
-            if (r.user === null) {
-                return {
-                    id: r.userId,
-                    firstName: null,
-                    lastName: null
-                }
-            }
-            return r.user
-        });
+        return rows
     }
     
     async userExists(id: string): Promise<boolean> {

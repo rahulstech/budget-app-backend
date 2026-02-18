@@ -52,10 +52,8 @@ export class Logger {
         if (context instanceof Error) {
             const error = context as any;
             if (typeof error.toJson === "function") {
-                console.log("from toJson");
                 return error.toJson();
             }
-            console.log("from custom, level ", level);
             return {
                 reason: {
                     name: error.name,
