@@ -566,11 +566,15 @@ export class BudgetService {
     private async insertParticipant(factory: RepoFactory, dto: AddParticipantDto): Promise<EventDto> {
         // insert participant
         const newParticipant = await factory.createParticipantRepo().insertParticipant(toParticipant(dto));
+
+        // get user
+        const user = await factory.createUserRepo().getUser(dto.userId);
         
         // logInfo("BudgetService.insertParticipant", { newParticipant });
         
         // insert event
-        const event = await factory.createEventRepo().insertEvent(EventBuilder.addParticipant(dto.actorUserId, newParticipant));
+        const event = await factory.createEventRepo()
+                            .insertEvent(EventBuilder.addParticipant(dto.actorUserId, { ...newParticipant, ...user! }));
         
         // logInfo("BudgetService.insertParticipant", { event });
 

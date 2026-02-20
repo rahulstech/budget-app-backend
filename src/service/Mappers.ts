@@ -1,4 +1,4 @@
-import { Budget, Category, Expense, Participant, Event } from "../data/Models.js";
+import { Budget, Category, Expense, Participant, Event, User, ParticipantUser } from "../data/Models.js";
 import { CreateBudgetDto, AddCategoryDto, AddExpenseDto, EventDto, EditExpenseDto, 
     DeleteExpenseDto, EditCategoryDto, EditBudgetDto, DeleteCategoryDto, DeleteBudgetDto,
      AddParticipantDto, RemoveParticipantDto, 
@@ -222,12 +222,13 @@ export class EventBuilder {
         };
     }
 
-    static addParticipant(actorUserId: string, participant: Participant): Event {
-        const { budgetId, userId } = participant;
+    static addParticipant(actorUserId: string, participant: ParticipantUser): Event {
+        const { budgetId, id, firstName, lastName } = participant;
         return {
             ...this.base(budgetId, actorUserId),
             type: EventType.ADD_PARTICIPANT,
-            recordId: userId,
+            recordId: id,
+            data: { firstName, lastName  }
         };
     }
 
