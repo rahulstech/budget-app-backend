@@ -19,6 +19,10 @@ export class EventRepoImpl implements EventRepo {
         return newEvent;
     }
 
+    async getEventById(id: string): Promise<Event | null> {
+        const [event] = await this.db.select().from(events).where(eq(events.id, id));
+        return event ?? null;
+    }
 
     async getBudgetEvents(
         budgetId: string, excludeUserId: string, lastSequence: number, itemCount: number = 20

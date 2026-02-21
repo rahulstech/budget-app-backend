@@ -1,16 +1,17 @@
 import { HttpError } from "../../core/HttpError.js";
+import { logDebug, logError } from "../../core/Logger.js";
 import { mapZodErrorToHttpError } from "../../core/Mappers.js";
 import { EventType } from "../../core/Types.js";
 import { BudgetService } from "../../service/BudgetService.js";
 import { EventDto } from "../../service/Dtos.js";
 import { EventSchema } from "../middleware/EventValidationSchemas.js";
-import { ControllerParams, EventBodyModel, PostEventsBodyModel, ResponseModel } from "../Types.js";
+import { ControllerParams, EventBodyModel, ResponseModel } from "../Types.js";
 
 // Append offline evnets
 export async function handlePostEvents(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
 
-  const { events, userId } = params;
-  const sortedEvents = (events as EventBodyModel[])
+  const { body, userId } = params;
+  const sortedEvents = (body.events as EventBodyModel[])
     .sort((a, b) => a.when - b.when);
 
   const results: ResponseModel[] = [];
@@ -75,9 +76,14 @@ async function dispatchEvent(service: BudgetService, event: EventBodyModel, acto
       actorUserId
     );
 
+    logDebug("EventsController.dispatchEvent", { input: event, output: syncEvent });
+
     return normalizeSuccess(syncEvent);
   } 
   catch (err: any) {
+
+    logDebug("EventsController.dispatchEvent", {err});
+
     return normalizeFailure(event, err);
   }
 }
@@ -88,6 +94,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
   switch (event.event) {
     case await EventType.EDIT_BUDGET:
       return service.editBudget({
+        eventId: event.eventId,
         id: budgetId,
         actorUserId,
         title: event.title,
@@ -98,6 +105,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.DELETE_BUDGET: 
       return service.deleteBudget({
+        eventId: event.eventId,
         id: budgetId,
         actorUserId,
         version: event.version,
@@ -106,6 +114,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.ADD_CATEGORY:
       return await service.addCategory({
+        eventId: event.eventId,
         id: event.id,
         budgetId,
         actorUserId,
@@ -116,6 +125,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.EDIT_CATEGORY:
       return await service.editCategory({
+        eventId: event.eventId,
         id: event.id,
         budgetId,
         actorUserId,
@@ -127,6 +137,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.DELETE_CATEGORY:
       return await service.deleteCategory({
+        eventId: event.eventId,
         id: event.id,
         budgetId,
         actorUserId,
@@ -136,6 +147,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.ADD_EXPENSE:
       return await service.addExpense({
+        eventId: event.eventId,
         id: event.id,
         budgetId,
         actorUserId,
@@ -147,6 +159,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.EDIT_EXPENSE:
       return await service.editExpense({
+        eventId: event.eventId,
         id: event.id,
         budgetId,
         actorUserId,
@@ -159,6 +172,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
     case EventType.DELETE_EXPENSE:
       return await service.deleteExpense({
+        eventId: event.eventId,
         id: event.id,
         budgetId,
         actorUserId,

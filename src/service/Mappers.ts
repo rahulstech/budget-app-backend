@@ -110,10 +110,10 @@ export function toUserDto(user: any): UserDto {
 
 
 export class EventBuilder {
-    private static base(budgetId: string, userId: string): any {
+    private static base(eventId: string, budgetId: string, userId: string): any {
         const now = Date.now();
         return {
-            id: generateUUID(),
+            id: eventId,
             budgetId,
             userId,
             sequence: 0,
@@ -126,7 +126,7 @@ export class EventBuilder {
     static createBudget(budget: Budget): Event {
         const { id: budgetId, title, details, createdBy: userId, version, offlineLastModified: when } = budget;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(generateUUID(),budgetId,userId),
             type: EventType.CREATE_BUDGET,
             recordId: budgetId,
             when,
@@ -135,9 +135,9 @@ export class EventBuilder {
     }
 
     static editBudget(dto: EditBudgetDto, newVersion: number): Event {
-        const { id, title, details, actorUserId, when } = dto;
+        const { eventId, id, title, details, actorUserId, when } = dto;
         return {
-            ...this.base(id, actorUserId),
+            ...this.base(eventId, id, actorUserId),
             type: EventType.EDIT_BUDGET,
             recordId: id,
             when,
@@ -146,9 +146,9 @@ export class EventBuilder {
     }
 
     static deleteBudget(dto: DeleteBudgetDto): Event {
-        const { id: budgetId, actorUserId: userId, when } = dto;
+        const { eventId, id: budgetId, actorUserId: userId, when } = dto;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.DELETE_BUDGET,
             recordId: budgetId,
             when,
@@ -156,10 +156,10 @@ export class EventBuilder {
     }
 
 
-    static addCategory(category: Category): Event {
+    static addCategory(eventId: string, category: Category): Event {
         const { id, budgetId, name, allocate, version, createdBy: userId, offlineLastModified: when } = category;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.ADD_CATEGORY,
             recordId: id,
             when,
@@ -168,9 +168,9 @@ export class EventBuilder {
     }
 
     static editCategory(dto: EditCategoryDto, newVersion: number): Event {
-        const { id: recordId, budgetId, actorUserId: userId, name, allocate, when } = dto;
+        const { eventId, id: recordId, budgetId, actorUserId: userId, name, allocate, when } = dto;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.ADD_CATEGORY,
             recordId,
             when,
@@ -179,9 +179,9 @@ export class EventBuilder {
     }
 
     static deleteCategory(dto: DeleteCategoryDto): Event {
-        const { id: recordId, budgetId, actorUserId: userId, version, when } = dto;
+        const { eventId, id: recordId, budgetId, actorUserId: userId, version, when } = dto;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.ADD_CATEGORY,
             recordId,
             when,
@@ -189,10 +189,10 @@ export class EventBuilder {
         };
     }
 
-    static addExpense(expense: Expense): Event {
+    static addExpense(eventId: string, expense: Expense): Event {
         const { id, budgetId, categoryId, createdBy: userId, date, note, amount, version, offlineLastModified: when } = expense;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.ADD_EXPENSE,
             recordId: id,
             when,
@@ -201,9 +201,9 @@ export class EventBuilder {
     }
 
     static editExpense(dto: EditExpenseDto, newVersion: number): Event {
-        const { id: recordId, budgetId, actorUserId: userId, date, amount, note, when } = dto;
+        const { eventId, id: recordId, budgetId, actorUserId: userId, date, amount, note, when } = dto;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.EDIT_EXPENSE,
             recordId,
             when,
@@ -212,9 +212,9 @@ export class EventBuilder {
     }
 
     static deleteExpense(dto: DeleteExpenseDto): Event {
-        const { id: recordId, budgetId, actorUserId: userId, version, when } = dto;
+        const { eventId, id: recordId, budgetId, actorUserId: userId, version, when } = dto;
         return {
-            ...this.base(budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.DELETE_EXPENSE,
             recordId,
             when,
@@ -225,7 +225,7 @@ export class EventBuilder {
     static addParticipant(actorUserId: string, participant: ParticipantUser): Event {
         const { budgetId, id, firstName, lastName } = participant;
         return {
-            ...this.base(budgetId, actorUserId),
+            ...this.base(generateUUID(),budgetId, actorUserId),
             type: EventType.ADD_PARTICIPANT,
             recordId: id,
             data: { firstName, lastName  }
@@ -235,7 +235,7 @@ export class EventBuilder {
     static removeParticipant(dto: RemoveParticipantDto): Event {
         const { budgetId, actorUserId, userId } = dto;
         return {
-            ...this.base(budgetId, actorUserId),
+            ...this.base(generateUUID(),budgetId,actorUserId),
             type: EventType.REMOVE_PARTICIPANT,
             recordId: userId,
         };

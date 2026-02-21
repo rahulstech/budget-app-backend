@@ -11,6 +11,7 @@ export type CreateBudgetDto = {
 }
 
 export type EditBudgetDto = {
+    eventId: string,
     id: string,
     actorUserId: string,
     title?: string,
@@ -20,6 +21,7 @@ export type EditBudgetDto = {
 }
 
 export type DeleteBudgetDto = {
+    eventId: string,
     id: string,
     actorUserId: string,
     version: number,
@@ -39,6 +41,7 @@ export type BudgetDto = {
 // Category DTOs
 
 export type AddCategoryDto = {
+    eventId: string,
     id: string,
     budgetId: string,
     actorUserId: string,
@@ -48,6 +51,7 @@ export type AddCategoryDto = {
 }
 
 export type EditCategoryDto = {
+    eventId: string,
     id: string,
     budgetId: string,
     actorUserId: string,
@@ -58,6 +62,7 @@ export type EditCategoryDto = {
 }
 
 export type DeleteCategoryDto = {
+    eventId: string,
     id: string,
     budgetId: string,
     actorUserId: string,
@@ -78,6 +83,7 @@ export type CategoryDto = {
 // expense DTOs
 
 export type AddExpenseDto = {
+    eventId: string,
     id: string,
     budgetId: string,
     categoryId: string,
@@ -89,6 +95,7 @@ export type AddExpenseDto = {
 }
 
 export type EditExpenseDto = {
+    eventId: string,
     id: string,
     budgetId: string,
     actorUserId: string,
@@ -100,6 +107,7 @@ export type EditExpenseDto = {
 }
 
 export type DeleteExpenseDto = {
+    eventId: string,
     id: string,
     budgetId: string,
     categoryId?: string,
@@ -123,12 +131,18 @@ export type ExpenseDto = {
 // Participant DTOs
 
 export type AddParticipantDto = {
+    // add participant is not an offline event
+    // therefore client never sends eventId
+
     budgetId: string,
     actorUserId: string,
     userId: string,             // participant beging added
 }
 
 export type RemoveParticipantDto = {
+    // remove participant is not an offline event
+    // therefore client never sends eventId
+
     budgetId: string,
     actorUserId: string,
     userId: string,           // participant being removed

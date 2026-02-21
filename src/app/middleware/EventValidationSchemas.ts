@@ -8,6 +8,7 @@ const EpochMillis = z.number().int().nonnegative();
 const DecimalString = z.string().regex(/^\d+(\.\d+)?$/);
 
 const EventCommonSchema = z.object({
+    eventId: z.uuid(),
     budgetId: z.uuid(),
     when: EpochMillis,
 })

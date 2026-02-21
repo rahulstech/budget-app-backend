@@ -18,8 +18,7 @@ import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
 import { PagedResult } from "../core/Types.js";
 import { BudgetRepo } from "../data/BudgetRepo.js";
-import { Environment } from "../core/Environment.js";
-import { logInfo } from "../core/Logger.js";
+import { logDebug, logInfo } from "../core/Logger.js";
 
 const MAX_RESULTS = 100;
 
@@ -60,7 +59,6 @@ export class BudgetService {
         return this.client.runInTransaction(async (factory) => {
             const budgetRepo = factory.createBudgetRepo();
             const eventRepo = factory.createEventRepo();
-            const userRepo = factory.createUserRepo();
 
             // logInfo("BudgetService.create", { dto });
 
@@ -76,21 +74,25 @@ export class BudgetService {
                 logInfo("BudgetService.create", { event });
 
                 // insert participant 
-                await this.insertParticipant(factory, {
+                const { firstName, lastName } = await this.insertParticipant(factory, {
                     budgetId: budget.id,
                     actorUserId: budget.createdBy,
                     userId: budget.createdBy,
                 });
-
-                // get creator user
-                const participant = await userRepo.getUser(budget.createdBy);
 
                 // logInfo("BudgetService.create", { creatorUser });
 
                 const { id, version } = budget;
 
                 // return event
-                return toBudgetDto({ id, version }, participant!);
+                return toBudgetDto(
+                    { id, version }, 
+                    { 
+                        id: budget.createdBy,
+                        budgetId: budget.id,
+                        firstName,
+                        lastName,
+                    });
             }
             catch(error) {
                 throw this.mapError(error);
@@ -131,7 +133,10 @@ export class BudgetService {
      */
     async editBudget(dto: EditBudgetDto): Promise<EventDto> {
 
-        const { id, actorUserId, version, when, title, details } = dto;
+        const { eventId, id, actorUserId, version, when, title, details } = dto;
+
+        const oldEvent = await this.getEventById(eventId);
+        if (oldEvent) return oldEvent;
 
         await this.policy.canEditBudget(id, actorUserId, when);
 
@@ -173,6 +178,10 @@ export class BudgetService {
      * - Sync event recorded
      */
     async deleteBudget(dto: DeleteBudgetDto): Promise<EventDto> {
+
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent) return oldEvent;
+
         // check policy
         await this.policy.canDeleteBudget(dto.id, dto.actorUserId);
 
@@ -288,6 +297,12 @@ export class BudgetService {
      */
     async addCategory(dto: AddCategoryDto): Promise<EventDto> { 
 
+        const oldEvent = await this.getEventById(dto.eventId);
+
+        logDebug("BudgetService.addCategory", { dto, oldEvent });
+
+        if (oldEvent) return oldEvent;
+
          // is event allowed?
         await this.policy.canAddCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
@@ -300,7 +315,7 @@ export class BudgetService {
                 const category = await categoryRepo.insertCategory(toCategory(dto));
 
                 // insert sync event
-                const event = await eventRepo.insertEvent(EventBuilder.addCategory(category));
+                const event = await eventRepo.insertEvent(EventBuilder.addCategory(dto.eventId,category));
 
                 // return categorydto
                 return toEventDto(event);
@@ -333,6 +348,9 @@ export class BudgetService {
      * - Sync event recorded
      */
     async editCategory(dto: EditCategoryDto): Promise<EventDto> {
+
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent) return oldEvent;
         
         // is event allowed?
         await this.policy.canEditCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
@@ -373,6 +391,10 @@ export class BudgetService {
      * - Sync event recorded
      */
     async deleteCategory(dto: DeleteCategoryDto): Promise<EventDto> {
+
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent) return oldEvent;
+
         // is event allowed?
         await this.policy.canDeleteCategory(dto.budgetId, dto.actorUserId, dto.when);
 
@@ -415,6 +437,10 @@ export class BudgetService {
      * - Sync event recorded
      */
     async addExpense(dto: AddExpenseDto): Promise<EventDto> {
+
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent) return oldEvent;
+
         // check policy
         await this.policy.canAddExpense(dto.budgetId, dto.actorUserId, dto.when,  dto.id, dto.categoryId);
 
@@ -427,7 +453,7 @@ export class BudgetService {
                 const expense = await expenseRepo.insertExpense(toExpense(dto));
 
                 // insert event
-                const event = await eventRepo.insertEvent(EventBuilder.addExpense(expense));
+                const event = await eventRepo.insertEvent(EventBuilder.addExpense(dto.eventId,expense));
 
                 return toEventDto(event);
             }
@@ -460,6 +486,9 @@ export class BudgetService {
      * - Sync event recorded
      */
     async editExpense(dto: EditExpenseDto): Promise<EventDto> {
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent) return oldEvent;
+
         // policy check
         await this.policy.canEditExpense(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
@@ -506,6 +535,9 @@ export class BudgetService {
      * - Sync event recorded
      */
     async deleteExpense(dto: DeleteExpenseDto): Promise<EventDto> {
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent) return oldEvent;
+        
         // policy: creator-only rule
         await this.policy.canDeleteExpense(dto.budgetId, dto.actorUserId, dto.when);
 
@@ -562,6 +594,14 @@ export class BudgetService {
     }
 
     // helper methods
+
+    private async getEventById(id: string): Promise<EventDto|null> {
+        const event = await this.client.getRepoFactory().createEventRepo().getEventById(id);
+        if (event) {
+            return toEventDto(event);
+        }
+        return null;
+    }
 
     private async insertParticipant(factory: RepoFactory, dto: AddParticipantDto): Promise<EventDto> {
         // insert participant

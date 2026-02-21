@@ -3,7 +3,6 @@ import { asyncHandler } from "../Helper.js";
 import { validateBody, validateQuery } from "../middleware/Validators.js";
 import { handleGetEvents, handlePostEvents } from "../controller/EventsController.js";
 import { GetEventsQuerySchema, PostEventsBodySchema } from "../middleware/EventValidationSchemas.js";
-import { PostEventsBodyModel } from "../Types.js";
 
 export const eventRouter = Router();
 
@@ -11,7 +10,7 @@ eventRouter.post("/events",
     validateBody(PostEventsBodySchema),
     asyncHandler(async (req: Request, res: Response)=> {
         const userId = req.userId;
-        const body = req.validatedBody as PostEventsBodyModel;
+        const body = req.validatedBody;
         const service = req.budgetService;
 
         const result = await handlePostEvents(service,{ userId, body });
