@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { CategoryRepo } from "../CategoryRepo.js";
 import { categories } from "../schema/Tables.js";
 import { Category, Database, UpdateCategoryModel } from "../Models.js";
@@ -11,6 +11,11 @@ export class CategoryRepoImpl implements CategoryRepo {
     async insertCategory(category: Category): Promise<Category> {
         const [newCategory] = await this.db.insert(categories).values(category).returning();
         return newCategory;
+    }
+
+    async getCategoryById(id: string): Promise<Category | null> {
+        const [row] = await this.db.select().from(categories).where(eq(categories.id, id));
+        return row || null;
     }
 
     async getBudgetCategories(budgetId: string): Promise<Omit<Category,"serverCreatedAt">[]> {
@@ -31,33 +36,30 @@ export class CategoryRepoImpl implements CategoryRepo {
         const [row] = await this.db.update(categories)
         .set({
             ...updates,
-            version: expectedVersion + 1,
+            version: sql`version + 1`,
             offlineLastModified: newLastModified,
         })
-        .where(and(
-            eq(categories.id,id),
-            eq(categories.version,expectedVersion)
-        ))
+        .where(eq(categories.id,id))
         .returning();
 
-        if (!row) {
-            throw new RepoError("VERSION_MISMATCH");
+        if (row && row.version !== expectedVersion+1) {
+            throw new RepoError("VERSION_MISMATCH", { ...row, version: row.version-1 });
         }
 
         return row;
     }
 
-    async deleteCategory(id: string, expectedVersion: number): Promise<void> {
+    async deleteCategory(id: string, expectedVersion: number): Promise<boolean> {
         const [deletedCategory] = await this.db
             .delete(categories)
-            .where(and(
-                eq(categories.id, id),
-            ))
+            .where(eq(categories.id, id))
             .returning();
 
         if (deletedCategory && deletedCategory.version !== expectedVersion) {
             throw new RepoError("VERSION_MISMATCH");
         }
+
+        return typeof deletedCategory !== undefined;
     }
 
 }

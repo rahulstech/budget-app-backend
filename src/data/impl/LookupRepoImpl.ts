@@ -18,7 +18,6 @@ export class LookupRepoImpl implements LookupRepo {
       .limit(1)
 
     if (budget) {
-      console.log(budget);
       return ignoreDeleted || !budget.isDeleted;
     }
 

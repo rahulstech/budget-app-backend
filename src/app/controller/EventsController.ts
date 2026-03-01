@@ -1,5 +1,5 @@
 import { HttpError } from "../../core/HttpError.js";
-import { logDebug, logError } from "../../core/Logger.js";
+import { logError } from "../../core/Logger.js";
 import { mapZodErrorToHttpError } from "../../core/Mappers.js";
 import { EventType } from "../../core/Types.js";
 import { BudgetService } from "../../service/BudgetService.js";
@@ -18,8 +18,16 @@ export async function handlePostEvents(service: BudgetService, params: Controlle
 
   // execute sequentially so that dependent event does not fail
   for (const e of sortedEvents) {
-    const res = await processSingleEvent(service, e, userId);
-    results.push(res);
+    try {
+      const res = await processSingleEvent(service, e, userId);
+      results.push(res);
+    }
+    catch(err: any) {
+      // logDebug("EventsController.dispatchEvent", {err});
+      const res = normalizeFailure(e, err);
+      results.push(res);
+      break;
+    }
   }
 
   return { events: results };
@@ -36,7 +44,7 @@ export async function handleGetEvents(service: BudgetService, params: Controller
     budgetId,
     key,
     nextKey,
-    events: events.map(toSyncResponseModel) 
+    events 
   };
 }
 
@@ -48,13 +56,8 @@ export async function handleGetEvents(service: BudgetService, params: Controller
  */
 
 async function processSingleEvent(service: BudgetService, rawEvent: any, actorUserId: string): Promise<ResponseModel> {
-  try {
-    const validated = validateSingleEvent(rawEvent);
-    return await dispatchEvent(service, validated, actorUserId);
-  }
-  catch(error: any) {
-    return normalizeFailure(rawEvent,error);
-  }
+  const validated = validateSingleEvent(rawEvent);
+  return await dispatchEvent(service, validated, actorUserId);
 }
 
 
@@ -68,24 +71,22 @@ function validateSingleEvent(rawEvent: Record<string,any>): EventBodyModel {
 }
 
 
-async function dispatchEvent(service: BudgetService, event: EventBodyModel, actorUserId: string): Promise<ResponseModel> {
-  try {
-    const syncEvent = await callServiceForEvent(
-      service,
-      event,
-      actorUserId
-    );
-
-    logDebug("EventsController.dispatchEvent", { input: event, output: syncEvent });
-
-    return normalizeSuccess(syncEvent);
-  } 
-  catch (err: any) {
-
-    logDebug("EventsController.dispatchEvent", {err});
-
-    return normalizeFailure(event, err);
-  }
+async function dispatchEvent(service: BudgetService, input: EventBodyModel, actorUserId: string): Promise<ResponseModel> {
+  const result = await callServiceForEvent(service, input,actorUserId);
+  // logDebug("EventsController.dispatchEvent", { input: event, output: syncEvent });
+  const { 
+    eventId, event, budgetId, recordId, 
+    version, // when event successfully applied new version is returned
+    currentRecord // when version mismatch happens, current record is returned
+  } = result;
+  return {
+    eventId,
+    event,
+    budgetId,
+    recordId,
+    version,
+    currentRecord
+  };
 }
 
 
@@ -115,7 +116,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.ADD_CATEGORY:
       return await service.addCategory({
         eventId: event.eventId,
-        id: event.id,
+        id: event.recordId,
         budgetId,
         actorUserId,
         name: event.name,
@@ -126,7 +127,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.EDIT_CATEGORY:
       return await service.editCategory({
         eventId: event.eventId,
-        id: event.id,
+        id: event.recordId,
         budgetId,
         actorUserId,
         name: event.name,
@@ -138,7 +139,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.DELETE_CATEGORY:
       return await service.deleteCategory({
         eventId: event.eventId,
-        id: event.id,
+        id: event.recordId,
         budgetId,
         actorUserId,
         version: event.version,
@@ -148,7 +149,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.ADD_EXPENSE:
       return await service.addExpense({
         eventId: event.eventId,
-        id: event.id,
+        id: event.recordId,
         budgetId,
         actorUserId,
         categoryId: event.categoryId,
@@ -160,7 +161,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.EDIT_EXPENSE:
       return await service.editExpense({
         eventId: event.eventId,
-        id: event.id,
+        id: event.recordId,
         budgetId,
         actorUserId,
         date: event.date,
@@ -173,7 +174,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.DELETE_EXPENSE:
       return await service.deleteExpense({
         eventId: event.eventId,
-        id: event.id,
+        id: event.recordId,
         budgetId,
         actorUserId,
         version: event.version,
@@ -186,39 +187,21 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 }
 
 
-function normalizeSuccess(dto: EventDto): ResponseModel {
-  const { event, budgetId, recordId: id, data } = dto;
-  return {
-    event,
-    id,
-    budgetId,
-    version: data?.version,
-  };
-}
-
 function normalizeFailure(body: any, err: any): ResponseModel {
-  const { event, budgetId, id } = body;
+  const { eventId, event, budgetId, recordId } = body;
+  let errors: string[] = [];
   if (err instanceof HttpError) {
-    return {
-      event, id, budgetId, 
-      errors: err.flatten(),
-    };
+    errors = err.flatten();
   }
-
+  else {
+    logError("EventsController.handlePostEvents", { eventId, event, budgetId, recordId, err });
+    errors = ["INTERNAL_ERROR"];
+  }
   return {
-    event,  id, budgetId,
-    errors: ["INTERNAL_ERROR"],
-  };
-}
-
-function toSyncResponseModel(dto: EventDto): ResponseModel {
-  const { event, budgetId, actorUserId: actorId, recordId, when, data } = dto;
-  return {
-    event,
-    budgetId,
-    actorId,
-    recordId,
-    when,
-    data,
+      eventId,
+      event,
+      budgetId,
+      recordId,  
+      errors
   };
 }

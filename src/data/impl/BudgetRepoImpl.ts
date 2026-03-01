@@ -1,7 +1,7 @@
 import { BudgetRepo } from "../BudgetRepo.js";
 import { budgets, participants } from "../schema/Tables.js";
 import { Budget, Database, SelectBudgetModel, UpdateBudgetModel } from "../Models.js";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { RepoError } from "../RepoError.js";
 
 export class BudgetRepoImpl implements BudgetRepo {
@@ -43,21 +43,20 @@ export class BudgetRepoImpl implements BudgetRepo {
       .update(budgets)
       .set({
         ...updates,
-        version: expectedVersion + 1,
+        version: sql`version + 1`,
         offlineLastModified: lastModified
       })
-      .where(and(eq(budgets.id, id), eq(budgets.version, expectedVersion)))
+      .where(eq(budgets.id, id))
       .returning();
 
-    if (!row) {
-      // no rows updated -> version mismatch or not found
-      throw new RepoError("VERSION_MISMATCH");
+    if (row && row.version !== expectedVersion+1) {
+      throw new RepoError("VERSION_MISMATCH", { ...row, version: row.version-1 });
     }
 
     return row;
   }
 
-  async deleteBudget(id: string, expectedVersion: number): Promise<void> {
+  async deleteBudget(id: string, expectedVersion: number): Promise<boolean> {
     // Implementation for deleting a budget from the database
     const [row] = await this.db.delete(budgets)
       .where(and(
@@ -67,8 +66,10 @@ export class BudgetRepoImpl implements BudgetRepo {
       .returning();
 
       if (row && row.version !== expectedVersion) {
-        throw new RepoError("VERSION_MISMATCH");
+        throw new RepoError("VERSION_MISMATCH", row);
       }
+
+      return typeof row !== undefined;
   }
 
   

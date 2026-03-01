@@ -9,6 +9,7 @@ const DecimalString = z.string().regex(/^\d+(\.\d+)?$/);
 
 const EventCommonSchema = z.object({
     eventId: z.uuid(),
+    event: NonEmptyString,
     budgetId: z.uuid(),
     when: EpochMillis,
 })
@@ -31,14 +32,14 @@ const DeleteBudgetEventSchema = EventCommonSchema.extend({
 
 const AddCategoryEventSchema = EventCommonSchema.extend({
     event: z.literal(EventType.ADD_CATEGORY),
-    id: NonEmptyString,
+    recordId: NonEmptyString,
     name: NonEmptyString,
     allocate: DecimalString,
 });
 
 const EditCategoryEventSchema = EventCommonSchema.extend({
     event: z.literal(EventType.EDIT_CATEGORY),
-    id: NonEmptyString,
+    recordId: NonEmptyString,
     name: z.string().optional(),
     allocate: DecimalString.optional(),
     version: NonNegativeInt,
@@ -46,13 +47,13 @@ const EditCategoryEventSchema = EventCommonSchema.extend({
 
 const DeleteCategoryEventSchema = EventCommonSchema.extend({
     event: z.literal(EventType.DELETE_CATEGORY),
-    id: NonEmptyString,
+    recordId: NonEmptyString,
     version: NonNegativeInt,
 });
 
 const AddExpenseEventSchema = EventCommonSchema.extend({
     event: z.literal(EventType.ADD_EXPENSE),
-    id: NonEmptyString,
+    recordId: NonEmptyString,
     categoryId: NonEmptyString,
     date: z.iso.date(),
     amount: DecimalString,
@@ -61,7 +62,7 @@ const AddExpenseEventSchema = EventCommonSchema.extend({
 
 const EditExpenseEventSchema = EventCommonSchema.extend({
     event: z.literal(EventType.EDIT_EXPENSE),
-    id: NonEmptyString,
+    recordId: NonEmptyString,
     date: z.iso.date().optional(),
     amount: DecimalString.optional(),
     note: z.string().optional(),
@@ -70,7 +71,7 @@ const EditExpenseEventSchema = EventCommonSchema.extend({
 
 const DeleteExpenseEventSchema = EventCommonSchema.extend({
     event: z.literal(EventType.DELETE_EXPENSE),
-    id: NonEmptyString,
+    recordId: NonEmptyString,
     version: NonNegativeInt,
 });
 
@@ -93,16 +94,17 @@ export const EventSchema = z.discriminatedUnion("event", [
  */
 export const PostEventsBodySchema = z.object({
   events: z.array(z.looseObject({
+    eventId: z.uuid(),
+    event: NonEmptyString,
     budgetId: z.uuid(),
-    event: z.string(),
     when: EpochMillis,
-  })).min(1).max(25)
+})).min(1).max(25)
 });
 
 
 // Query schema for fetching sync events
 export const GetEventsQuerySchema = z.object({
     budgetId: z.uuid(),
-    key: z.coerce.number().int().positive().optional(),
+    key: z.coerce.number().int().nonnegative().optional(),
     count: z.coerce.number().int().positive().optional(),
 });

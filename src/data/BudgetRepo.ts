@@ -10,5 +10,5 @@ export interface BudgetRepo {
   
   updateBudget(id: string, budget: UpdateBudgetModel, expectedVersion: number, lastModified: number): Promise<Budget>
   
-  deleteBudget(id: string, expectedVersion: number): Promise<void>
+  deleteBudget(id: string, expectedVersion: number): Promise<boolean>
 }

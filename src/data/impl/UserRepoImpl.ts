@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { Database, ParticipantUser, UpdateUserModel, User } from "../Models.js";
+import { Database, ParticipantUser, UpdateUserModel, User, UserPublicInfo } from "../Models.js";
 import { participants, users } from "../schema/Tables.js";
 import { UserRepo } from "../UserRepo.js";
 
@@ -49,6 +49,15 @@ export class UserRepoImpl implements UserRepo {
 
     async getUser(id: string): Promise<User | null> {
         const [row] = await this.db.select().from(users).where(eq(users.id, id));
+        return row ?? null;
+    }
+
+    async getUserPublicInfo(id: string): Promise<UserPublicInfo | null> {
+        const [row] = await this.db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName
+        }).from(users).where(eq(users.id, id));
         return row ?? null;
     }
 }

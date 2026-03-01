@@ -15,7 +15,7 @@ export function extractUserId(): RequestHandler {
             req.userId = req.headers.authorization;
             return next();
         }
-        next(new HttpError.Forbidden("NOT_LOGGED_IN"));
+        next(new HttpError(401, "NOT_LOGGED_IN"));
     }
 }
 

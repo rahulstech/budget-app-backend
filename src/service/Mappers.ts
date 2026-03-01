@@ -1,4 +1,4 @@
-import { Budget, Category, Expense, Participant, Event, User, ParticipantUser } from "../data/Models.js";
+import { Budget, Category, Expense, Participant, Event, User, ParticipantUser, UserPublicInfo } from "../data/Models.js";
 import { CreateBudgetDto, AddCategoryDto, AddExpenseDto, EventDto, EditExpenseDto, 
     DeleteExpenseDto, EditCategoryDto, EditBudgetDto, DeleteCategoryDto, DeleteBudgetDto,
      AddParticipantDto, RemoveParticipantDto, 
@@ -66,9 +66,9 @@ export function toParticipant(dto: AddParticipantDto): Participant {
 // model -> dto
 
 export function toBudgetDto(budget: any, participant?: ParticipantDto): BudgetDto {
-    const { id, createdBy, title, details, version, offlineLastModified } = budget;
+    const { eventId, id, createdBy, title, details, version, offlineLastModified } = budget;
     return {
-        id, createdBy, title,details, version, offlineLastModified, participant
+       eventId, id, createdBy, title, details: details ?? undefined, version, offlineLastModified, participant
     }
 }
 
@@ -82,17 +82,18 @@ export function toCategoryDto(category: any): CategoryDto {
 export function toExpenseDto(expense: any): ExpenseDto {
     const { id, budgetId, categoryId, createdBy, date, amount, note, version, offlineLastModified } = expense;
     return {
-        id, budgetId, categoryId, createdBy, date, amount, note, version, offlineLastModified 
+        id, budgetId, categoryId, createdBy, date, amount, note: note ?? undefined, version, offlineLastModified 
     };
 }
 
 export function toEventDto(value: any): EventDto {
-    const { type: event, sequence, budgetId, userId: actorUserId, recordId, when, data } = value;
+    const { id, type: event, sequence, budgetId, userId: actorId, recordId, when, data } = value;
     return {
+        eventId: id,
         event,
         sequence,
         budgetId,
-        actorUserId,
+        actorId,
         recordId,
         when,
         ...(data ?? {})
@@ -123,10 +124,10 @@ export class EventBuilder {
         };
     }
 
-    static createBudget(budget: Budget): Event {
+    static createBudget(eventId: string, budget: Budget): Event {
         const { id: budgetId, title, details, createdBy: userId, version, offlineLastModified: when } = budget;
         return {
-            ...this.base(generateUUID(),budgetId,userId),
+            ...this.base(eventId,budgetId,userId),
             type: EventType.CREATE_BUDGET,
             recordId: budgetId,
             when,
@@ -171,7 +172,7 @@ export class EventBuilder {
         const { eventId, id: recordId, budgetId, actorUserId: userId, name, allocate, when } = dto;
         return {
             ...this.base(eventId,budgetId,userId),
-            type: EventType.ADD_CATEGORY,
+            type: EventType.EDIT_CATEGORY,
             recordId,
             when,
             data: { name, allocate, version: newVersion }
@@ -182,7 +183,7 @@ export class EventBuilder {
         const { eventId, id: recordId, budgetId, actorUserId: userId, version, when } = dto;
         return {
             ...this.base(eventId,budgetId,userId),
-            type: EventType.ADD_CATEGORY,
+            type: EventType.DELETE_CATEGORY,
             recordId,
             when,
             data: { version }
@@ -222,12 +223,13 @@ export class EventBuilder {
         };
     }
 
-    static addParticipant(actorUserId: string, participant: ParticipantUser): Event {
+    static addParticipant(actorUserId: string, participant: ParticipantUser & { joinedAt: number }): Event {
         const { budgetId, id, firstName, lastName } = participant;
         return {
             ...this.base(generateUUID(),budgetId, actorUserId),
             type: EventType.ADD_PARTICIPANT,
             recordId: id,
+            when: participant.joinedAt,
             data: { firstName, lastName  }
         };
     }

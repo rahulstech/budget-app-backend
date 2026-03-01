@@ -1,7 +1,8 @@
 import z from "zod";
 
 export const PostBudgetBodySchema = z.object({
-  id: z.string().nonempty(),
+  eventId: z.uuid(),
+  id: z.uuid(),
   title: z.string().nonempty(),
   details: z.string().optional(),
   when: z.number().int().nonnegative(),

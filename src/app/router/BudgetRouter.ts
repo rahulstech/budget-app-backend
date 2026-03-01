@@ -46,7 +46,7 @@ budgetRouter.get("/budgets",
 )
 
 // Get latest snapshot for a budget
-budgetRouter.get(buildRoute("snapshot",":entity"),
+budgetRouter.get(buildRoute("snapshot"),
   validateQuery(SnapShotQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.userId;

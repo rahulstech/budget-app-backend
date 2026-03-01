@@ -1,4 +1,4 @@
-import { ParticipantUser, UpdateUserModel, User } from "./Models.js";
+import { ParticipantUser, UpdateUserModel, User, UserPublicInfo } from "./Models.js";
 
 export interface UserRepo {
 
@@ -11,6 +11,8 @@ export interface UserRepo {
     getParticipantUsers(budgetId: string): Promise<ParticipantUser[]>
 
     getUser(id: string): Promise<User | null>
+
+    getUserPublicInfo(id: string): Promise<UserPublicInfo | null>
 
     userExists(id: string): Promise<boolean>
 }

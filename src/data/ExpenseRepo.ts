@@ -8,6 +8,8 @@ export interface ExpenseRepo {
      */
     insertExpense(expense: Expense): Promise<Expense>
 
+    getExpenseById(id: string): Promise<Expense | null>
+
     /**
      * Lists expenses for a budget with paging.
      *
@@ -41,5 +43,5 @@ export interface ExpenseRepo {
      *
      * Authorization is handled by the service layer.
      */
-    deleteExpense(id: string, expectedVersion: number): Promise<void>
+    deleteExpense(id: string, expectedVersion: number): Promise<boolean>
 }

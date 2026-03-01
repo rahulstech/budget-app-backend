@@ -3,6 +3,7 @@
 import { EventType } from "../core/Types.js"
 
 export type CreateBudgetDto = {
+    eventId: string,
     id: string,
     actorUserId: string,
     title: string,
@@ -29,6 +30,7 @@ export type DeleteBudgetDto = {
 }
 
 export type BudgetDto = {
+    eventId: string,
     id: string,
     createdBy?: string,
     title?: string,
@@ -137,6 +139,7 @@ export type AddParticipantDto = {
     budgetId: string,
     actorUserId: string,
     userId: string,             // participant beging added
+    joinedAt: number,
 }
 
 export type RemoveParticipantDto = {
@@ -158,12 +161,13 @@ export type ParticipantDto = {
 // Event DTOs
 
 export type EventDto = {
+    eventId: string,
     event: EventType,
-    sequence: number,
     budgetId: string,
-    recordId: string,
-    actorUserId: string,
-    when: number,
+    recordId?: string,
+    currentRecord?: {
+        [k: string]: any,
+    }
     [k: string]: any,
 }
 

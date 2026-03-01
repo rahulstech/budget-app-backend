@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { ExpenseRepo } from "../ExpenseRepo.js";
 import { expenses } from "../schema/Tables.js";
 import { Database, Expense, UpdateExpenseModel } from "../Models.js";
@@ -16,6 +16,11 @@ export class ExpenseRepoImpl implements ExpenseRepo {
             .values(expense)
             .returning();
         return row;
+    }
+
+    async getExpenseById(id: string): Promise<Expense | null> {
+        const [row] = await this.db.select().from(expenses).where(eq(expenses.id, id));
+        return row || null;
     }
 
     async getExpenses(
@@ -53,18 +58,14 @@ export class ExpenseRepoImpl implements ExpenseRepo {
             .update(expenses)
             .set({
                 ...updates,
-                version: expectedVersion + 1,
+                version: sql`version + 1`,
                 offlineLastModified: newLastModified,
             })
-            .where(
-                and(
-                    eq(expenses.id, id),
-                )
-            )
+            .where(eq(expenses.id, id))
             .returning();
         
-        if (!row) {
-            throw new RepoError("VERSION_MISMATCH");
+        if (row && row.version !== expectedVersion+1) {
+            throw new RepoError("VERSION_MISMATCH", { ...row, version: row.version-1 });
         }
 
         return row;
@@ -72,14 +73,16 @@ export class ExpenseRepoImpl implements ExpenseRepo {
 
     /* ================= Delete ================= */
 
-    async deleteExpense(id: string, expectedVersion: number): Promise<void> {
-        const [row] = await this.db
+    async deleteExpense(id: string, expectedVersion: number): Promise<boolean> {
+        const [deletedExpense] = await this.db
             .delete(expenses)
             .where(eq(expenses.id, id))
             .returning();
 
-        if (row && row.version !== expectedVersion) {
-            throw new RepoError("VERSION_MISMATCH");
+        if (deletedExpense && deletedExpense.version !== expectedVersion) {
+            throw new RepoError("VERSION_MISMATCH", deletedExpense);
         }
+
+        return typeof deletedExpense !== undefined;
     }
 }

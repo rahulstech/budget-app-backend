@@ -8,7 +8,7 @@ import { AddCategoryDto, AddExpenseDto, AddParticipantDto, CreateBudgetDto, Dele
      BudgetDto,
      CategoryDto,
      ExpenseDto,
-     ParticipantDto,} from "./Dtos.js";
+     ParticipantDto} from "./Dtos.js";
 import { EventBuilder, toEventDto, toParticipant,
      toCategory, toExpense, toBudget, 
      toBudgetDto,
@@ -16,9 +16,8 @@ import { EventBuilder, toEventDto, toParticipant,
      toExpenseDto} from "./Mappers.js";
 import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
-import { PagedResult } from "../core/Types.js";
+import { EventType, PagedResult } from "../core/Types.js";
 import { BudgetRepo } from "../data/BudgetRepo.js";
-import { logDebug, logInfo } from "../core/Logger.js";
 
 const MAX_RESULTS = 100;
 
@@ -69,27 +68,32 @@ export class BudgetService {
                 // logInfo("BudgetService.create", { budget });
 
                 // insert create budget event
-                const event = await eventRepo.insertEvent(EventBuilder.createBudget(budget));
+                const { id: eventId } = await eventRepo.insertEvent(EventBuilder.createBudget(dto.eventId,budget));
 
-                logInfo("BudgetService.create", { event });
+                // logInfo("BudgetService.create", { event });
 
                 // insert participant 
                 const { firstName, lastName } = await this.insertParticipant(factory, {
                     budgetId: budget.id,
                     actorUserId: budget.createdBy,
                     userId: budget.createdBy,
+                    joinedAt: dto.when
                 });
 
                 // logInfo("BudgetService.create", { creatorUser });
 
-                const { id, version } = budget;
+                const { id, version, createdBy } = budget;
 
                 // return event
                 return toBudgetDto(
-                    { id, version }, 
                     { 
-                        id: budget.createdBy,
-                        budgetId: budget.id,
+                        eventId,
+                        id, 
+                        version,
+                    }, 
+                    { 
+                        id: createdBy,
+                        budgetId: id,
                         firstName,
                         lastName,
                     });
@@ -135,33 +139,45 @@ export class BudgetService {
 
         const { eventId, id, actorUserId, version, when, title, details } = dto;
 
+        // check if event already exists (idempotency)
         const oldEvent = await this.getEventById(eventId);
         if (oldEvent) return oldEvent;
 
+        // check edit allowed
         await this.policy.canEditBudget(id, actorUserId, when);
 
-        return this.client.runInTransaction(async (factory) => {
-            const budgetRepo = factory.createBudgetRepo();
-            const eventRepo = factory.createEventRepo();
+        // perform edit
+        try {
+            return await this.client.runInTransaction(async (factory) => {
+                const budgetRepo = factory.createBudgetRepo();
+                const eventRepo = factory.createEventRepo();
 
-            try {
-                // insert budget
+                // update budget
                 const budget = await budgetRepo.updateBudget(
                     id,
-                     { title, details } , 
-                     version,
-                     when
+                    { title, details }, 
+                    version,
+                    when
                 );
 
                 // insert event
                 const event = await eventRepo.insertEvent(EventBuilder.editBudget(dto, budget.version));
 
                 return toEventDto(event);
+            });
+        }
+        catch(err: any) {
+            if (this.isVersionMisMatchError(err)) {
+                return {
+                    eventId,
+                    event: EventType.EDIT_BUDGET,
+                    budgetId: id,
+                    currentRecord: toBudgetDto(err.context)
+                }
             }
-            catch(error: any) {
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err);
+        }
+        
     }
 
     /**
@@ -179,19 +195,22 @@ export class BudgetService {
      */
     async deleteBudget(dto: DeleteBudgetDto): Promise<EventDto> {
 
+        const { eventId, id, actorUserId, version, when } = dto;
+
         const oldEvent = await this.getEventById(dto.eventId);
         if (oldEvent) return oldEvent;
 
         // check policy
         await this.policy.canDeleteBudget(dto.id, dto.actorUserId);
 
-        return this.client.runInTransaction(async (factory) => {
-            const budgetRepo = factory.createBudgetRepo();
-            const eventRepo = factory.createEventRepo();
+        try {
+            // mark delete
+            return await this.client.runInTransaction(async (factory) => {
+                const budgetRepo = factory.createBudgetRepo();
+                const eventRepo = factory.createEventRepo();
 
-            try {
                 // mark the budget deleted
-                const budget = await budgetRepo.updateBudget(dto.id, { isDeleted: true }, dto.version, Date.now());
+                const budget = await budgetRepo.updateBudget(id, { isDeleted: true }, version, when);
 
                 // record sync event (intent + authority)
                 const event = await eventRepo.insertEvent(EventBuilder.deleteBudget({
@@ -200,11 +219,19 @@ export class BudgetService {
                 }));
 
                 return toEventDto(event);
+            });
+        }
+        catch(err: any) {
+            if (this.isVersionMisMatchError(err)) {
+                return {
+                    eventId,
+                    event: EventType.DELETE_BUDGET,
+                    budgetId: id,
+                    currentRecord: toBudgetDto(err.context)
+                };
             }
-            catch(error: any) { 
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err); 
+        }
     }
 
 
@@ -299,7 +326,7 @@ export class BudgetService {
 
         const oldEvent = await this.getEventById(dto.eventId);
 
-        logDebug("BudgetService.addCategory", { dto, oldEvent });
+        // logDebug("BudgetService.addCategory", { dto, oldEvent });
 
         if (oldEvent) return oldEvent;
 
@@ -349,31 +376,41 @@ export class BudgetService {
      */
     async editCategory(dto: EditCategoryDto): Promise<EventDto> {
 
+        const { id, budgetId, name, allocate, actorUserId, version: expectedVersion, when } = dto
+
+        // check if event already exists (idempotency)
         const oldEvent = await this.getEventById(dto.eventId);
         if (oldEvent) return oldEvent;
         
-        // is event allowed?
-        await this.policy.canEditCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
+        // check edit policy
+        await this.policy.canEditCategory(budgetId, actorUserId, when, id);
 
-        return this.client.runInTransaction(async (factory) => {
-            const categoryRepo = factory.createCategoryRepo();
-            const eventRepo = factory.createEventRepo();
-            const { id, name, allocate, version: expectedVersion, when: newwhen } = dto
-            
-            try {
+        try {
+            return this.client.runInTransaction(async (factory) => {
+                const categoryRepo = factory.createCategoryRepo();
+                const eventRepo = factory.createEventRepo();
+                
                 // update category
-                const category = await categoryRepo.updateCategory(id, {name,allocate}, expectedVersion, newwhen);
+                const category = await categoryRepo.updateCategory(id, {name,allocate}, expectedVersion, when);
 
                 // insert sync event
                 const event = await eventRepo.insertEvent(EventBuilder.editCategory(dto, category.version));
 
                 // return sync event
                 return toEventDto(event);
+            });
+        }
+        catch(err: any) {
+            if (this.isVersionMisMatchError(err)) {
+                return {
+                    eventId: dto.eventId,
+                    event: EventType.EDIT_CATEGORY,
+                    budgetId: dto.budgetId,
+                    currentRecord: toCategoryDto(err.context)
+                };
             }
-            catch(error: any) {
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err);
+        }
     }
 
     /**
@@ -392,30 +429,51 @@ export class BudgetService {
      */
     async deleteCategory(dto: DeleteCategoryDto): Promise<EventDto> {
 
+        const { eventId, id, budgetId, actorUserId, version, when } = dto;
+
         const oldEvent = await this.getEventById(dto.eventId);
         if (oldEvent) return oldEvent;
 
         // is event allowed?
-        await this.policy.canDeleteCategory(dto.budgetId, dto.actorUserId, dto.when);
+        await this.policy.canDeleteCategory(budgetId, actorUserId, when);
 
-        return this.client.runInTransaction(async (factory) => {
-            const categoryRepo = factory.createCategoryRepo();
-            const eventRepo = factory.createEventRepo();
-
-            try {
+        try {
+            return await this.client.runInTransaction(async (factory) => {
+                const categoryRepo = factory.createCategoryRepo();
+                const eventRepo = factory.createEventRepo();
                 // delete category
-                await categoryRepo.deleteCategory(dto.id, dto.version);
+                const deleted = await categoryRepo.deleteCategory(id,version);
 
-                // insert sync event
-                const event = await eventRepo.insertEvent(EventBuilder.deleteCategory(dto));
+                // add event if category was exist
+                if (deleted) {
+                    // insert sync event
+                    const event = await eventRepo.insertEvent(EventBuilder.deleteCategory(dto));
 
-                // return sync event
-                return toEventDto(event);
+                    // return sync event
+                    return toEventDto(event);
+                }
+
+                return {
+                    eventId,
+                    event: EventType.DELETE_CATEGORY,
+                    budgetId,
+                    recordId: id,
+                    version,
+                    when
+                };
+            });
+        }
+        catch(err: any) {
+            if (this.isVersionMisMatchError(err)) {
+                return {
+                    eventId: dto.eventId,
+                    event: EventType.DELETE_CATEGORY,
+                    budgetId: dto.budgetId,
+                    currentRecord: toCategoryDto(err.context)
+                };
             }
-            catch(error: any) {
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err);
+        }
     }
 
     /* =========================================================
@@ -486,39 +544,50 @@ export class BudgetService {
      * - Sync event recorded
      */
     async editExpense(dto: EditExpenseDto): Promise<EventDto> {
+
+        // check if event already exists (idempotency)
         const oldEvent = await this.getEventById(dto.eventId);
         if (oldEvent) return oldEvent;
 
         // policy check
         await this.policy.canEditExpense(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
-        return this.client.runInTransaction(async (factory) => {
+        // perform edit
+        try {
+        return await this.client.runInTransaction(async (factory) => {
             const expenseRepo = factory.createExpenseRepo();
             const eventRepo = factory.createEventRepo();
 
-            try {
-                // optimistic update handled by repo
-                const expense = await expenseRepo.updateExpense(
-                    dto.id, 
-                    { 
-                        date: dto.date, 
-                        amount: dto.amount, 
-                        note: dto.note
-                    },
-                    dto.version,
-                    dto.when
-                );
+            // optimistic update handled by repo
+            const expense = await expenseRepo.updateExpense(
+                dto.id, 
+                { 
+                    date: dto.date, 
+                    amount: dto.amount, 
+                    note: dto.note
+                },
+                dto.version,
+                dto.when
+            );
 
-                // record event
-                const event = await eventRepo.insertEvent(EventBuilder.editExpense(dto, expense.version));
+            // record event
+            const event = await eventRepo.insertEvent(EventBuilder.editExpense(dto, expense.version));
 
-                // return event
-                return toEventDto(event);
-            }
-            catch(error: any) {
-                throw this.mapError(error)
-            }
+            // return event
+            return toEventDto(event);
         });
+        }
+        catch(err: any) {
+            if (this.isVersionMisMatchError(err)) {
+                return {
+                    eventId: dto.eventId,
+                    event: EventType.EDIT_EXPENSE,
+                    budgetId: dto.budgetId,
+                    currentRecord: toExpenseDto(err.context)
+                };
+            }
+            throw this.mapError(err);
+        }
     }
 
     /**
@@ -535,29 +604,52 @@ export class BudgetService {
      * - Sync event recorded
      */
     async deleteExpense(dto: DeleteExpenseDto): Promise<EventDto> {
+
+        // check if event already exists (idempotency)
         const oldEvent = await this.getEventById(dto.eventId);
         if (oldEvent) return oldEvent;
         
-        // policy: creator-only rule
+        // check delete allowed
         await this.policy.canDeleteExpense(dto.budgetId, dto.actorUserId, dto.when);
 
-        return this.client.runInTransaction(async (factory) => {
-            const expenseRepo = factory.createExpenseRepo();
-            const eventRepo = factory.createEventRepo();
+        try {
+            // perform delete
+            return await this.client.runInTransaction(async (factory) => {
+                const expenseRepo = factory.createExpenseRepo();
+                const eventRepo = factory.createEventRepo();
 
-            try {
                 // delete
-                await expenseRepo.deleteExpense(dto.id, dto.version);
+                const deleted = await expenseRepo.deleteExpense(dto.id, dto.version);
 
-                // record event using pre-delete snapshot
-                const event = await eventRepo.insertEvent(EventBuilder.deleteExpense(dto));
+                // add event if expense was exist
+                if (deleted) {
+                    // record event using pre-delete snapshot
+                    const event = await eventRepo.insertEvent(EventBuilder.deleteExpense(dto));
 
-                return toEventDto(event);
+                    return toEventDto(event);
+                }
+                return {
+                    eventId: dto.eventId,
+                    event: EventType.DELETE_EXPENSE,
+                    budgetId: dto.budgetId,
+                    recordId: dto.id,
+                    version: dto.version,
+                    when: dto.when,
+                };
+            });
+        }
+        catch(err: any) {
+            console.log(err);
+            if (this.isVersionMisMatchError(err)) {
+                return {
+                    eventId: dto.eventId,
+                    event: EventType.DELETE_CATEGORY,
+                    budgetId: dto.budgetId,
+                    currentRecord: toExpenseDto(err.context)
+                };
             }
-            catch(error: any) {
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err);
+        }
     }
 
     /* =========================================================
@@ -608,29 +700,29 @@ export class BudgetService {
         const newParticipant = await factory.createParticipantRepo().insertParticipant(toParticipant(dto));
 
         // get user
-        const user = await factory.createUserRepo().getUser(dto.userId);
+        const user = (await factory.createUserRepo().getUserPublicInfo(dto.userId))!;
         
         // logInfo("BudgetService.insertParticipant", { newParticipant });
         
         // insert event
         const event = await factory.createEventRepo()
-                            .insertEvent(EventBuilder.addParticipant(dto.actorUserId, { ...newParticipant, ...user! }));
+                            .insertEvent(EventBuilder.addParticipant(
+                                dto.actorUserId, { ...newParticipant, ...user, joinedAt: dto.joinedAt })
+                            );
         
         // logInfo("BudgetService.insertParticipant", { event });
 
         return toEventDto(event);
     }
     
+    private isVersionMisMatchError(error: any): boolean {
+        return error instanceof RepoError && error.code === "VERSION_MISMATCH";
+    }
+
     private mapError(error: any): AppError {
         if (error instanceof RepoError) {
-            switch(error.code) {
-                case "VERSION_MISMATCH": {
-                    return new HttpError(400,error.code);
-                }
-            }
+            return error;
         }
-        else {
-            return new AppError("BudgetService", true, error);
-        }
+        return new AppError("BudgetService", true, error);
     }
 }

@@ -3,7 +3,7 @@ export class AppError extends Error {
     readonly name: string = this.constructor.name;
     readonly shouldShutdown: boolean = false;
 
-    constructor(message: string, shouldShutdown: boolean = false, reason?: Error) {
+    constructor(message: string, shouldShutdown: boolean = false, reason: Error | null = null) {
         super(message);
         this.shouldShutdown = shouldShutdown;
 

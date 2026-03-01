@@ -26,11 +26,12 @@ export class EventRepoImpl implements EventRepo {
 
     async getBudgetEvents(
         budgetId: string, excludeUserId: string, lastSequence: number, itemCount: number = 20
-    ): Promise<Omit<Event,"id"|"serverCreatedAt">[]> {
+    ): Promise<Omit<Event,"serverCreatedAt">[]> {
         const safeItemCount = Math.min(itemCount, 100); // hard cap
 
         return await this.db
             .select({
+                id: events.id,
                 type: events.type,
                 sequence: events.sequence,
                 budgetId: events.budgetId,

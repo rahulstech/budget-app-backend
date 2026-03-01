@@ -8,6 +8,7 @@ import { ControllerParams } from "../Types.js";
 export async function handlePostBudget(service: BudgetService, params: ControllerParams) {
   const { userId, body } = params;
   const dto: CreateBudgetDto = {
+    eventId: body.eventId,
     id: body.id,
     actorUserId: userId,
     title: body.title,
@@ -15,13 +16,14 @@ export async function handlePostBudget(service: BudgetService, params: Controlle
     when: body.when,
   };
 
-  return await service.createBudget(dto);
+  const result = await service.createBudget(dto);
+  return result;
 }
 
 // Join Participant
 export async function handleJoinPartcipant(service: BudgetService, params: ControllerParams) {
   const { budgetId, userId } = params
-  await service.addParticipant({ budgetId, actorUserId: userId, userId });
+  await service.addParticipant({ budgetId, actorUserId: userId, userId, joinedAt: Date.now() });
   return true;
 }
 
