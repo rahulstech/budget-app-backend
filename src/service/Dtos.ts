@@ -1,6 +1,7 @@
 // Budget DTOs
 
 import { EventType } from "../core/Types.js"
+import { ParticipantUser } from "../data/Models.js"
 
 export type CreateBudgetDto = {
     eventId: string,
@@ -151,12 +152,7 @@ export type RemoveParticipantDto = {
     userId: string,           // participant being removed
 }
 
-export type ParticipantDto = {
-    id: string,
-    budgetId?: string,
-    firstName: string | null,
-    lastName: string | null,
-};
+export type ParticipantDto = ParticipantUser;
 
 // Event DTOs
 
@@ -165,9 +161,6 @@ export type EventDto = {
     event: EventType,
     budgetId: string,
     recordId?: string,
-    currentRecord?: {
-        [k: string]: any,
-    }
     [k: string]: any,
 }
 
@@ -176,4 +169,7 @@ export type UserDto = {
     id: string,
     firstName: string,
     lastName?: string,
+    email: string,
+    thumbnailUrl?: string,
+    rawUrl?: string,
 }

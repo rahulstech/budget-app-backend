@@ -1,7 +1,6 @@
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { PgTransaction } from "drizzle-orm/pg-core";
 import { budgets, categories, events, expenses, participants, users } from "./schema/Tables.js";
-import { Nullable } from "../core/Types.js";
 
 export type Database = NodePgDatabase | PgTransaction<any,any,any>;
 
@@ -25,15 +24,24 @@ export type Event = typeof events.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 
-export type UserPublicInfo = Pick<User, "id" | "firstName" | "lastName">;
+export type UserPublicInfo = {
+    id: string,
+    firstName: string,
+    lastName: string | null,
+    displayPhotoThumbnailUrl: string | null,
+    displayPhotoRawUrl: string | null,
+};
 
 export type ParticipantUser = {
     id: string,
     budgetId: string,
+    userExists: boolean,
     firstName: string | null,
     lastName: string | null,
-
-};
+    displayPhotoThumbnailUrl: string | null,
+    displayPhotoRawUrl: string | null,
+    joinedAt: number,
+}
 
 export type UpdateUserModel = Partial<Omit<User,"id">>;
 

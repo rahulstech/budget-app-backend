@@ -1,4 +1,6 @@
+import { Environment, isDevEnvironment } from "../../core/Environment.js";
 import { HttpError } from "../../core/HttpError.js";
+import { logDebug } from "../../core/Logger.js";
 import { BudgetService } from "../../service/BudgetService.js";
 import { CreateBudgetDto } from "../../service/Dtos.js";
 import { ControllerParams } from "../Types.js";
@@ -7,6 +9,11 @@ import { ControllerParams } from "../Types.js";
 // Create a budget
 export async function handlePostBudget(service: BudgetService, params: ControllerParams) {
   const { userId, body } = params;
+
+  if (isDevEnvironment()) {
+    logDebug("handlepostbudget.body", { ...body })
+  }
+
   const dto: CreateBudgetDto = {
     eventId: body.eventId,
     id: body.id,

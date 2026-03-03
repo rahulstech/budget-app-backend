@@ -31,7 +31,6 @@ export const budgets = pgTable("budgets", {
 });
 
 
-
 export const categories = pgTable('categories', {
   // client sent global id as primary key
     id: uuid('id').primaryKey(),
@@ -83,10 +82,18 @@ export const participants = pgTable('participants', {
   // auth system id for the participant
   userId: text('user_id').notNull(),
 
+  joinedAt: bigint('joined_at', { mode: 'number'}).notNull()
+
 }, (table) => [
-  primaryKey({ name: "pk_participants", columns: [table.budgetId, table.userId] }),
+  primaryKey({ name: "pk_participants", columns: [table.userId, table.budgetId] }),
 ]);
 
+export const eventSequence = pgTable("event_sequences", {
+  budgetId: uuid('budget_id').primaryKey(),
+  
+  // always increasing integer value per budget
+  sequence: bigint("sequence_no", { mode: "number" }).notNull(),
+})
 
 
 export const events = pgTable("accepted_events", {
@@ -115,7 +122,7 @@ export const events = pgTable("accepted_events", {
 
   data: json("data"),
 }, (table) => [
-  index("idx_accepted_events_budgetId_userId").on(table.budgetId, table.userId)
+  index("idx_accepted_events_userId_budgetId_").on(table.userId, table.budgetId)
 ]);
 
 
@@ -127,4 +134,12 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
 
   lastName: text("last_name"),
+
+  email: text("email").notNull(),
+
+  displayPhotoThumbnailUrl: text("thumbnail_url"),
+
+  displayPhotoRawUrl: text("original_url"),
+
+  lastModified: bigint("last_modified", { mode: "number" }).notNull(),
 })

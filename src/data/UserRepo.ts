@@ -8,8 +8,6 @@ export interface UserRepo {
 
     deleteUser(id: string): Promise<void>
 
-    getParticipantUsers(budgetId: string): Promise<ParticipantUser[]>
-
     getUser(id: string): Promise<User | null>
 
     getUserPublicInfo(id: string): Promise<UserPublicInfo | null>

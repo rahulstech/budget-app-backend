@@ -1,10 +1,10 @@
 -- Custom SQL migration file, put your code below! --
 
 -- Create sync event sequence counter table
-CREATE TABLE IF NOT EXISTS "event_sequences"(
-    "budget_id" UUID NOT NULL PRIMARY KEY,
-    "sequence_no" BIGINT NOT NULL
-);
+-- CREATE TABLE IF NOT EXISTS "event_sequences"(
+--     "budget_id" UUID NOT NULL PRIMARY KEY,
+--     "sequence_no" BIGINT NOT NULL
+-- );
 
 -- Create procedure to obtain and update the event sequence for the budget
 create function get_next_event_sequence(p_budget_id uuid) returns bigint

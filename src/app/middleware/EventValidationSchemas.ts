@@ -105,6 +105,6 @@ export const PostEventsBodySchema = z.object({
 // Query schema for fetching sync events
 export const GetEventsQuerySchema = z.object({
     budgetId: z.uuid(),
-    key: z.coerce.number().int().nonnegative().optional(),
+    key: z.coerce.number().int().nonnegative().optional().default(0),
     count: z.coerce.number().int().positive().optional(),
 });

@@ -23,7 +23,6 @@ export async function handlePostEvents(service: BudgetService, params: Controlle
       results.push(res);
     }
     catch(err: any) {
-      // logDebug("EventsController.dispatchEvent", {err});
       const res = normalizeFailure(e, err);
       results.push(res);
       break;
@@ -64,7 +63,8 @@ async function processSingleEvent(service: BudgetService, rawEvent: any, actorUs
 function validateSingleEvent(rawEvent: Record<string,any>): EventBodyModel {
   const parsed = EventSchema.safeParse(rawEvent);
   if (!parsed.success) {
-      throw mapZodErrorToHttpError(parsed.error);
+      const err = mapZodErrorToHttpError(parsed.error);
+      throw err;
     }
 
   return parsed.data;
@@ -72,13 +72,13 @@ function validateSingleEvent(rawEvent: Record<string,any>): EventBodyModel {
 
 
 async function dispatchEvent(service: BudgetService, input: EventBodyModel, actorUserId: string): Promise<ResponseModel> {
-  const result = await callServiceForEvent(service, input,actorUserId);
-  // logDebug("EventsController.dispatchEvent", { input: event, output: syncEvent });
   const { 
     eventId, event, budgetId, recordId, 
     version, // when event successfully applied new version is returned
     currentRecord // when version mismatch happens, current record is returned
-  } = result;
+
+  } = await callServiceForEvent(service, input,actorUserId);
+
   return {
     eventId,
     event,
@@ -91,12 +91,11 @@ async function dispatchEvent(service: BudgetService, input: EventBodyModel, acto
 
 
 async function callServiceForEvent(service: BudgetService, event: EventBodyModel, actorUserId: string): Promise<EventDto> {
-  const { budgetId } = event;
   switch (event.event) {
     case await EventType.EDIT_BUDGET:
       return service.editBudget({
         eventId: event.eventId,
-        id: budgetId,
+        id: event.budgetId,
         actorUserId,
         title: event.title,
         details: event.details,
@@ -107,7 +106,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
     case EventType.DELETE_BUDGET: 
       return service.deleteBudget({
         eventId: event.eventId,
-        id: budgetId,
+        id: event.budgetId,
         actorUserId,
         version: event.version,
         when: event.when,
@@ -117,7 +116,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
       return await service.addCategory({
         eventId: event.eventId,
         id: event.recordId,
-        budgetId,
+        budgetId: event.budgetId,
         actorUserId,
         name: event.name,
         allocate: event.allocate,
@@ -128,7 +127,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
       return await service.editCategory({
         eventId: event.eventId,
         id: event.recordId,
-        budgetId,
+        budgetId: event.budgetId,
         actorUserId,
         name: event.name,
         allocate: event.allocate,
@@ -140,7 +139,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
       return await service.deleteCategory({
         eventId: event.eventId,
         id: event.recordId,
-        budgetId,
+        budgetId: event.budgetId,
         actorUserId,
         version: event.version,
         when: event.when
@@ -150,9 +149,10 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
       return await service.addExpense({
         eventId: event.eventId,
         id: event.recordId,
-        budgetId,
+        budgetId: event.budgetId,
         actorUserId,
         categoryId: event.categoryId,
+        note: event.note,
         date: event.date,
         amount: event.amount,
         when: event.when,
@@ -162,7 +162,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
       return await service.editExpense({
         eventId: event.eventId,
         id: event.recordId,
-        budgetId,
+        budgetId: event.budgetId,
         actorUserId,
         date: event.date,
         amount: event.amount,
@@ -175,7 +175,7 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
       return await service.deleteExpense({
         eventId: event.eventId,
         id: event.recordId,
-        budgetId,
+        budgetId: event.budgetId,
         actorUserId,
         version: event.version,
         when: event.when
@@ -194,7 +194,7 @@ function normalizeFailure(body: any, err: any): ResponseModel {
     errors = err.flatten();
   }
   else {
-    logError("EventsController.handlePostEvents", { eventId, event, budgetId, recordId, err });
+    logError("eventscontroller.normalizefailure", { eventId, event, budgetId, recordId, err });
     errors = ["INTERNAL_ERROR"];
   }
   return {

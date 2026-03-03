@@ -1,7 +1,7 @@
 import { RepoClient } from "../data/RepoClient.js";
 import { RepoError } from "../data/RepoError.js";
 import { RepoFactory } from "../data/RepoFactory.js";
-import { BudgetPolicy } from "./BudgetPolicy.js";
+import { BudgetPolicy, BudgetPolicyErrorCode } from "./BudgetPolicy.js";
 import { AddCategoryDto, AddExpenseDto, AddParticipantDto, CreateBudgetDto, DeleteBudgetDto,
      DeleteCategoryDto, DeleteExpenseDto, EditBudgetDto, EditCategoryDto, EditExpenseDto, 
      RemoveParticipantDto, EventDto,
@@ -18,6 +18,9 @@ import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
 import { EventType, PagedResult } from "../core/Types.js";
 import { BudgetRepo } from "../data/BudgetRepo.js";
+import { ParticipantUser, UserPublicInfo } from "../data/Models.js";
+import { isDevEnvironment } from "../core/Environment.js";
+import { logDebug, logError } from "../core/Logger.js";
 
 const MAX_RESULTS = 100;
 
@@ -51,57 +54,63 @@ export class BudgetService {
      * - Creator added as participant (joinedAt = now)
      * - Sync event recorded
      */
-    async createBudget(dto: CreateBudgetDto): Promise<BudgetDto> {
+    async createBudget(dto: CreateBudgetDto): Promise<EventDto> {
+        try {
+            await this.policy.canAddBudget(dto.id);
 
-        await this.policy.canAddBudget(dto.id);
+            if (isDevEnvironment()) {
+                logDebug("budgetservice.createbudget.dto",dto)
+            }
 
-        return this.client.runInTransaction(async (factory) => {
-            const budgetRepo = factory.createBudgetRepo();
-            const eventRepo = factory.createEventRepo();
+            return await this.client.runInTransaction(async (factory) => {
+                const budgetRepo = factory.createBudgetRepo();
+                const eventRepo = factory.createEventRepo();
 
-            // logInfo("BudgetService.create", { dto });
-
-            try {
                 // insert budget
                 const budget = await budgetRepo.insertBudget(toBudget(dto));
 
-                // logInfo("BudgetService.create", { budget });
-
                 // insert create budget event
-                const { id: eventId } = await eventRepo.insertEvent(EventBuilder.createBudget(dto.eventId,budget));
-
-                // logInfo("BudgetService.create", { event });
+                await eventRepo.insertEvent(EventBuilder.createBudget(dto.eventId,budget));
 
                 // insert participant 
-                const { firstName, lastName } = await this.insertParticipant(factory, {
+                const { participant } = await this.insertParticipant(factory, {
                     budgetId: budget.id,
                     actorUserId: budget.createdBy,
                     userId: budget.createdBy,
                     joinedAt: dto.when
                 });
 
-                // logInfo("BudgetService.create", { creatorUser });
-
-                const { id, version, createdBy } = budget;
-
                 // return event
-                return toBudgetDto(
-                    { 
+                return {
+                    eventId: dto.eventId,
+                    event: EventType.CREATE_BUDGET,
+                    budgetId: budget.id,
+                    version: budget.version,
+                    participant,
+                };
+            });
+        }
+        catch(err: any) {
+            if (isDevEnvironment()) {
+                logError("budgetservice.createbudget.err",{err})
+            }
+
+            if (this.isBudgetPolicyError(err,BudgetPolicyErrorCode.BUDGET_EXISTS)) {
+                const oldEvent = await this.getEventById(dto.eventId);
+                if (oldEvent !== null) {
+                    const { eventId, event, budgetId, actorId, version } = oldEvent;
+                    const participant = await this.client.getRepoFactory().createParticipantRepo().findParticipantById(actorId, budgetId);
+                    return {
                         eventId,
-                        id, 
+                        event,
+                        budgetId,
                         version,
-                    }, 
-                    { 
-                        id: createdBy,
-                        budgetId: id,
-                        firstName,
-                        lastName,
-                    });
+                        participant,
+                    };
+                }
             }
-            catch(error) {
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err);
+        }
     }
 
     async getBudget(budgetId: string): Promise<BudgetDto> {
@@ -257,14 +266,15 @@ export class BudgetService {
 
         await this.policy.canAddParticipant(dto.budgetId, dto.userId);
 
-        return this.client.runInTransaction(async (factory) => {
+        const { event } = await this.client.runInTransaction(async (factory) => {
             return this.insertParticipant(factory, dto);
         });
+        return event;
     }
 
     async getParticipantsOfBudget(budgetId: string): Promise<ParticipantDto[]> {
-        const repo = this.client.getRepoFactory().createUserRepo();
-        const results = await repo.getParticipantUsers(budgetId);
+        const repo = this.client.getRepoFactory().createParticipantRepo();
+        const results = await repo.getParticipantsOfBudget(budgetId);
         return results;
     }
 
@@ -323,21 +333,13 @@ export class BudgetService {
      * - Sync event recorded
      */
     async addCategory(dto: AddCategoryDto): Promise<EventDto> { 
+        try {
+            await this.policy.canAddCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
 
-        const oldEvent = await this.getEventById(dto.eventId);
+            return this.client.runInTransaction(async (factory) => {
+                const categoryRepo = factory.createCategoryRepo();
+                const eventRepo = factory.createEventRepo();
 
-        // logDebug("BudgetService.addCategory", { dto, oldEvent });
-
-        if (oldEvent) return oldEvent;
-
-         // is event allowed?
-        await this.policy.canAddCategory(dto.budgetId, dto.actorUserId, dto.when, dto.id);
-
-        return this.client.runInTransaction(async (factory) => {
-            const categoryRepo = factory.createCategoryRepo();
-            const eventRepo = factory.createEventRepo();
-
-            try {
                 // insert category
                 const category = await categoryRepo.insertCategory(toCategory(dto));
 
@@ -346,11 +348,16 @@ export class BudgetService {
 
                 // return categorydto
                 return toEventDto(event);
+            })
+        }
+        catch(err: any) {
+            if (this.isBudgetPolicyError(err,BudgetPolicyErrorCode.CATEGORY_EXISTS)) {
+                return (await this.getEventById(dto.eventId))!!;
             }
-            catch(error: any) {
-                throw this.mapError(error);
-            }
-        })
+
+            throw this.mapError(err);
+        }
+        
     }
 
     async getCategoriesOfBudget(budgetId: string): Promise<CategoryDto[]> {
@@ -464,6 +471,8 @@ export class BudgetService {
             });
         }
         catch(err: any) {
+            this.logErrorIfDev("budgetservice.deletecategory.err",err);
+
             if (this.isVersionMisMatchError(err)) {
                 return {
                     eventId: dto.eventId,
@@ -472,6 +481,7 @@ export class BudgetService {
                     currentRecord: toCategoryDto(err.context)
                 };
             }
+
             throw this.mapError(err);
         }
     }
@@ -495,18 +505,14 @@ export class BudgetService {
      * - Sync event recorded
      */
     async addExpense(dto: AddExpenseDto): Promise<EventDto> {
+        try {
+            // check policy
+            await this.policy.canAddExpense(dto.budgetId, dto.actorUserId, dto.when,  dto.id, dto.categoryId);
 
-        const oldEvent = await this.getEventById(dto.eventId);
-        if (oldEvent) return oldEvent;
+            return this.client.runInTransaction(async (factory) => {
+                const expenseRepo = factory.createExpenseRepo();
+                const eventRepo = factory.createEventRepo();
 
-        // check policy
-        await this.policy.canAddExpense(dto.budgetId, dto.actorUserId, dto.when,  dto.id, dto.categoryId);
-
-        return this.client.runInTransaction(async (factory) => {
-            const expenseRepo = factory.createExpenseRepo();
-            const eventRepo = factory.createEventRepo();
-
-            try {
                 // insert expense 
                 const expense = await expenseRepo.insertExpense(toExpense(dto));
 
@@ -514,11 +520,14 @@ export class BudgetService {
                 const event = await eventRepo.insertEvent(EventBuilder.addExpense(dto.eventId,expense));
 
                 return toEventDto(event);
+            });
+        }
+        catch(err: any) {
+            if (this.isBudgetPolicyError(err,BudgetPolicyErrorCode.EXPENSE_EXISTS)) {
+                return (await this.getEventById(dto.eventId))!!;
             }
-            catch(error: any) {
-                throw this.mapError(error);
-            }
-        });
+            throw this.mapError(err);
+        }
     }
 
     async getExpensesOfBudget(budgetId: string, key: number, count: number): Promise<PagedResult<number,ExpenseDto>> {
@@ -695,32 +704,43 @@ export class BudgetService {
         return null;
     }
 
-    private async insertParticipant(factory: RepoFactory, dto: AddParticipantDto): Promise<EventDto> {
+    private async insertParticipant(factory: RepoFactory, dto: AddParticipantDto): Promise<{ event: EventDto, participant: ParticipantDto}> {
         // insert participant
-        const newParticipant = await factory.createParticipantRepo().insertParticipant(toParticipant(dto));
+        const participantRepo = factory.createParticipantRepo();
 
-        // get user
-        const user = (await factory.createUserRepo().getUserPublicInfo(dto.userId))!;
-        
-        // logInfo("BudgetService.insertParticipant", { newParticipant });
+        const newParticipant = await participantRepo.insertParticipant(toParticipant(dto));
+
+        const participant = (await participantRepo.findParticipantById(dto.userId,dto.budgetId))!;
         
         // insert event
         const event = await factory.createEventRepo()
                             .insertEvent(EventBuilder.addParticipant(
-                                dto.actorUserId, { ...newParticipant, ...user, joinedAt: dto.joinedAt })
+                                dto.actorUserId, { ...newParticipant, ...participant, joinedAt: dto.joinedAt })
                             );
-        
-        // logInfo("BudgetService.insertParticipant", { event });
 
-        return toEventDto(event);
+        return { event: toEventDto(event), participant };
     }
     
+
+    private isBudgetPolicyError(err: any, code: BudgetPolicyErrorCode): boolean {
+        return err instanceof HttpError && err.issues !== undefined && err.issues[0] === code;
+    }
+
+    private logErrorIfDev(tag: string, err: any) {
+        if (isDevEnvironment()) {
+                logError(tag,{err})
+            }
+    }
+
     private isVersionMisMatchError(error: any): boolean {
         return error instanceof RepoError && error.code === "VERSION_MISMATCH";
     }
 
     private mapError(error: any): AppError {
         if (error instanceof RepoError) {
+            return error;
+        }
+        else if (error instanceof AppError) {
             return error;
         }
         return new AppError("BudgetService", true, error);

@@ -1,5 +1,5 @@
 {
-  "id": "9f231aa2-2149-4d0d-9a81-8ee6e9a6a546",
+  "id": "4eb7c1a9-073a-49ea-a00c-2ecc15cfd6d2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -143,6 +143,31 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.event_sequences": {
+      "name": "event_sequences",
+      "schema": "",
+      "columns": {
+        "budget_id": {
+          "name": "budget_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sequence_no": {
+          "name": "sequence_no",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.accepted_events": {
       "name": "accepted_events",
       "schema": "",
@@ -186,6 +211,12 @@
         "record_id": {
           "name": "record_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "when": {
+          "name": "when",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
@@ -330,6 +361,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -338,8 +375,8 @@
         "pk_participants": {
           "name": "pk_participants",
           "columns": [
-            "budget_id",
-            "user_id"
+            "user_id",
+            "budget_id"
           ]
         }
       },
@@ -369,6 +406,30 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thumbnail_url": {
+          "name": "thumbnail_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_url": {
+          "name": "original_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_modified": {
+          "name": "last_modified",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},

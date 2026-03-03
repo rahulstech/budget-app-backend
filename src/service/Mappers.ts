@@ -59,7 +59,8 @@ export function toExpense(dto: AddExpenseDto): Expense {
 export function toParticipant(dto: AddParticipantDto): Participant {
     return {
         budgetId: dto.budgetId,
-        userId: dto.userId
+        userId: dto.userId,
+        joinedAt: dto.joinedAt
     };
 }
 
@@ -101,11 +102,14 @@ export function toEventDto(value: any): EventDto {
 }
 
 export function toUserDto(user: any): UserDto {
-    const { id, firstName, lastName } = user;
+    const { id, firstName, lastName, email, displayPhotoRawUrl, displayPhotoThumbnailUrl } = user;
     return {
         id,
         firstName,
-        lastName: lastName === null ? undefined : lastName
+        lastName: lastName ?? undefined,
+        email,
+        thumbnailUrl: displayPhotoThumbnailUrl,
+        rawUrl: displayPhotoRawUrl,
     };
 }
 
@@ -223,14 +227,20 @@ export class EventBuilder {
         };
     }
 
-    static addParticipant(actorUserId: string, participant: ParticipantUser & { joinedAt: number }): Event {
-        const { budgetId, id, firstName, lastName } = participant;
+    static addParticipant(actorUserId: string, participant: ParticipantDto): Event {
+        const { budgetId, id, firstName, lastName, displayPhotoRawUrl, displayPhotoThumbnailUrl, joinedAt } = participant;
         return {
             ...this.base(generateUUID(),budgetId, actorUserId),
             type: EventType.ADD_PARTICIPANT,
             recordId: id,
-            when: participant.joinedAt,
-            data: { firstName, lastName  }
+            when: joinedAt,
+            data: {
+                firstName: firstName,
+                lastName: lastName,
+                displayPhotoRawUrl: displayPhotoRawUrl,
+                displayPhotoThumbnailUrl: displayPhotoThumbnailUrl,
+                joinedAt: joinedAt,
+            }
         };
     }
 

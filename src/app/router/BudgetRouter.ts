@@ -3,6 +3,8 @@ import { GetBudgetsQuerySchema, PostBudgetBodySchema, SnapShotQuerySchema } from
 import { asyncHandler } from "../Helper.js";
 import { validateBody, validateQuery } from "../middleware/Validators.js";
 import { handleGetBudgetsOfParticipant, handleGetSnapShot, handleJoinPartcipant, handleLeavePariticipant, handlePostBudget, handleRemoveParticipant } from "../controller/BudgetController.js";
+import { isDevEnvironment } from "../../core/Environment.js";
+import { logDebug } from "../../core/Logger.js";
 
 function buildRoute(...segments: string[]): string {
   let route = "/budgets/:budgetId";
@@ -25,6 +27,10 @@ budgetRouter.post(
     const body = req.validatedBody;
     const userId = req.userId;
     const service = req.budgetService;
+
+    if (isDevEnvironment()) {
+      logDebug("post.budget.body", body!)
+    }
 
     const result = await handlePostBudget(service, { body, userId });
 

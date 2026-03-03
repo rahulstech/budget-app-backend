@@ -20,6 +20,11 @@ CREATE TABLE "categories" (
 	"created_by" text NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "event_sequences" (
+	"budget_id" uuid PRIMARY KEY NOT NULL,
+	"sequence_no" bigint NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "accepted_events" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"sequence_no" bigint NOT NULL,
@@ -28,6 +33,7 @@ CREATE TABLE "accepted_events" (
 	"type" text NOT NULL,
 	"user_id" text NOT NULL,
 	"record_id" text NOT NULL,
+	"when" bigint NOT NULL,
 	"data" json
 );
 --> statement-breakpoint
@@ -47,13 +53,18 @@ CREATE TABLE "expenses" (
 CREATE TABLE "participants" (
 	"budget_id" uuid NOT NULL,
 	"user_id" text NOT NULL,
-	CONSTRAINT "pk_participants" PRIMARY KEY("budget_id","user_id")
+	"joined_at" bigint NOT NULL,
+	CONSTRAINT "pk_participants" PRIMARY KEY("user_id","budget_id")
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"first_name" text NOT NULL,
-	"last_name" text
+	"last_name" text,
+	"email" text NOT NULL,
+	"thumbnail_url" text,
+	"original_url" text,
+	"last_modified" bigint NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX "idx_categories_budgetId" ON "categories" USING btree ("budget_id");--> statement-breakpoint

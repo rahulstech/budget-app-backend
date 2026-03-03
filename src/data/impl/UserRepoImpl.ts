@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { Database, ParticipantUser, UpdateUserModel, User, UserPublicInfo } from "../Models.js";
-import { participants, users } from "../schema/Tables.js";
+import { Database, UpdateUserModel, User, UserPublicInfo } from "../Models.js";
+import { users } from "../schema/Tables.js";
 import { UserRepo } from "../UserRepo.js";
 
 export class UserRepoImpl implements UserRepo {
@@ -24,20 +24,6 @@ export class UserRepoImpl implements UserRepo {
     async deleteUser(id: string): Promise<void> {
         await this.db.delete(users).where(eq(users.id, id));
     }
-
-    async getParticipantUsers(budgetId: string): Promise<ParticipantUser[]> {
-        const rows = await this.db.select({
-            id: participants.userId,
-            budgetId: participants.budgetId,
-            firstName: users.firstName,
-            lastName: users.lastName
-        })
-            .from(participants)
-            .leftJoin(users, eq(participants.userId, users.id))
-            .where(eq(participants.budgetId, budgetId));
-
-        return rows
-    }
     
     async userExists(id: string): Promise<boolean> {
         const rows = await this.db.select({ id: users.id })
@@ -56,7 +42,9 @@ export class UserRepoImpl implements UserRepo {
         const [row] = await this.db.select({
             id: users.id,
             firstName: users.firstName,
-            lastName: users.lastName
+            lastName: users.lastName,
+            displayPhotoThumbnailUrl: users.displayPhotoThumbnailUrl,
+            displayPhotoRawUrl: users.displayPhotoRawUrl,
         }).from(users).where(eq(users.id, id));
         return row ?? null;
     }
