@@ -111,7 +111,7 @@ export class LookupRepoImpl implements LookupRepo {
     atMillis: number
   ): Promise<boolean> {
 
-    const [resultLastAdded] = await this.db.select({ whenLastAdded: events.serverCreatedAt }).from(events)
+    const [resultLastAdded] = await this.db.select({ whenLastAdded: events.when }).from(events)
     .where(and(
       eq(events.budgetId, budgetId),
       eq(events.type, EventType.ADD_PARTICIPANT),
@@ -125,7 +125,7 @@ export class LookupRepoImpl implements LookupRepo {
       return false;
     }
 
-    const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.serverCreatedAt }).from(events)
+    const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.when }).from(events)
     .where(and(
       eq(events.budgetId, budgetId),
       eq(events.type, EventType.REMOVE_PARTICIPANT),
