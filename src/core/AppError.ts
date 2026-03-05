@@ -1,15 +1,15 @@
 export class AppError extends Error {
 
     readonly name: string = this.constructor.name;
-    readonly shouldShutdown: boolean = false;
 
-    constructor(message: string, shouldShutdown: boolean = false, reason: Error | null = null) {
+    constructor(message: string, readonly shouldShutdown: boolean = false, readonly reason: any = null) {
         super(message);
-        this.shouldShutdown = shouldShutdown;
 
         // prepare stack trace
         Error.captureStackTrace(this);
-        this.stack = [this.stack, reason?.stack].filter(Boolean).join("\n");
+        if (reason instanceof Error) {
+            this.stack = [this.stack, reason.stack].filter(Boolean).join("\n");
+        }
     }
 
     toJson(): object {

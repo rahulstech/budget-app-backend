@@ -9,7 +9,7 @@ export type User = typeof users.$inferSelect;
 
 export type UserPublicInfo = Pick<User,"id"|"firstName"|"lastName"|"photo">;
 
-export type UpdateUserModel = Partial<Omit<User,"id">>;
+export type UpdateUserModel = Partial<Omit<User,"id"|"lastModified">>;
 
 export type Budget = typeof budgets.$inferSelect;
 

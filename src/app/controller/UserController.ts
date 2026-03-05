@@ -1,15 +1,15 @@
 import { UserService } from "../../service/UserService.js";
-import { ControllerParams } from "../Types.js";
+import { ControllerParams, ResponseModel } from "../Types.js";
 
 export async function handlePostUser(service: UserService, params: ControllerParams): Promise<any> {
-    const { userId, firstName, lastName } = params;
-    const user = await service.createUser({ id: userId, firstName, lastName });
+    const { userId, firstName, lastName, email } = params;
+    const user = await service.createUser({ id: userId, firstName, lastName, email });
     return user;
 }
 
 export async function handlePatchUser(service: UserService, params: ControllerParams): Promise<void> {
-    const { userId, firstName, lastName } = params;
-    await service.updateUser({ id: userId, firstName, lastName });
+    const { userId, firstName, lastName, email } = params;
+    await service.updateUser(userId, { firstName, lastName, email });
 }
 
 export async function handleDeleteUser(service: UserService, params: ControllerParams): Promise<void> {
@@ -20,6 +20,23 @@ export async function handleDeleteUser(service: UserService, params: ControllerP
 export async function handleGetUser(service: UserService, params: ControllerParams): Promise<any> {
     const { userId } = params;
     const user = await service.getUser(userId);
-    console.log(user);
     return user;
+}
+
+export async function handleGetUserPublicInfo(service: UserService, params: ControllerParams): Promise<any> {
+    const { userId } = params;
+    const user = await service.getUser(userId);
+    return user;
+}
+
+export async function handleGetPhotoUploadUrl(service: UserService, params: ControllerParams): Promise<ResponseModel> {
+    const { type, size } = params;
+    return await service.getPhotoUploadUrl(type, size);
+}
+
+export async function handleConfirmPhotoUploadUrl(service: UserService, params: ControllerParams): Promise<ResponseModel> {
+    const { userId, key } = params;
+    console.log(`userId ${userId} key ${key}`);
+    const publicUrl = await service.markUploaded(userId, key);
+    return { photo: publicUrl };
 }

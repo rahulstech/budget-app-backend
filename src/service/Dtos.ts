@@ -168,7 +168,7 @@ export type EventDto = {
 export type UserDto = {
     id: string,
     firstName: string,
-    lastName?: string,
+    lastName: string | null,
     email: string,
     thumbnailUrl?: string,
     rawUrl?: string,

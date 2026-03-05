@@ -14,7 +14,10 @@ export class UserRepoImpl implements UserRepo {
 
     async updateUser(id: string, updates: UpdateUserModel): Promise<User | null> {
         const [row] = await this.db.update(users)
-        .set(updates)
+        .set({
+            ...updates,
+            lastModified: Date.now()
+        })
         .where(eq(users.id, id))
         .returning();
 

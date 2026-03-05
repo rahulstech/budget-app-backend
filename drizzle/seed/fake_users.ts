@@ -21,8 +21,7 @@ async function main() {
             firstName: "Amit",
             lastName: "Sharma",
             email: "amit.sharma@email.com",
-            displayPhotoRawUrl: null,
-            displayPhotoThumbnailUrl: null,
+            photo: null,
             lastModified: Date.now()
         },
         {
@@ -30,8 +29,7 @@ async function main() {
             firstName: "Neha",
             lastName: "Verma",
             email: "neha.verma@email.com",
-            displayPhotoRawUrl: null,
-            displayPhotoThumbnailUrl: null,
+            photo: null,
             lastModified: Date.now()
         },
         {
@@ -39,8 +37,7 @@ async function main() {
             firstName: "Priya",
             lastName: "Sen",
             email: "priya.sen@email.com",
-            displayPhotoRawUrl: null,
-            displayPhotoThumbnailUrl: null,
+            photo: null,
             lastModified: Date.now()
         },
         {
@@ -48,8 +45,7 @@ async function main() {
             firstName: "Arjun",
             lastName: "Mehta",
             email: "arjun.mehta.verma@email.com",
-            displayPhotoRawUrl: null,
-            displayPhotoThumbnailUrl: null,
+            photo: null,
             lastModified: Date.now()
         },
         {
@@ -57,8 +53,7 @@ async function main() {
             firstName: "Pranab",
             lastName: "Rathor",
             email: "pranab.rathor@email.com",
-            displayPhotoRawUrl: null,
-            displayPhotoThumbnailUrl: null,
+            photo: null,
             lastModified: Date.now()
         }
     ]

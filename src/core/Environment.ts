@@ -13,6 +13,12 @@ const EnvSchema = z.object({
     DB_USE_SSL: z.coerce.boolean().default(false),
     DB_SSL_CA_BASE64: z.base64().nonempty().default(""),
     API_KEY_ANDROID: z.string().nonempty().default(""),
+
+    AWS_ID: z.string(),
+    AWS_SECRET: z.string(),
+    S3_REGION: z.string(),
+    S3_BUCKET: z.string(),
+    CDN_BASE_URL: z.url(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

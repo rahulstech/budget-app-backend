@@ -1,6 +1,7 @@
 import { Environment } from "../core/Environment.js";
 import { RepoClientImpl } from "../data/impl/RepoClientImpl.js";
 import { BudgetService } from "../service/BudgetService.js";
+import { S3StorageServiceImpl } from "../service/impl/S3StorageServiceImpl.js";
 import { UserService } from "../service/UserService.js";
 
 const {
@@ -23,5 +24,7 @@ repoClient.connect();
 // create budget service
 export const budgetService = new BudgetService(repoClient);
 
+export const storageService = new S3StorageServiceImpl();
+
 // create user service
-export const userService = new UserService(repoClient);
+export const userService = new UserService(repoClient,storageService);
