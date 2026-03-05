@@ -22,13 +22,12 @@ export class ParticipantRepoImpl implements ParticipantRepo {
 
     async getParticipantsOfBudget(budgetId: string): Promise<ParticipantUser[]> {
         const rows = await this.db.select({
-            id: participants.userId,
+            userId: participants.userId,
             budgetId: participants.budgetId,
             userExists: sql<boolean>`users.id IS NOT NULL`,
             firstName: users.firstName,
             lastName: users.lastName,
-            displayPhotoThumbnailUrl: users.displayPhotoThumbnailUrl,
-            displayPhotoRawUrl: users.displayPhotoRawUrl,
+            photo: users.photo,
             joinedAt: participants.joinedAt,
         })
         .from(participants)
@@ -40,13 +39,12 @@ export class ParticipantRepoImpl implements ParticipantRepo {
 
     async findParticipantById(userId: string, budgetId: string): Promise<ParticipantUser | null> {
         const [row] = await this.db.select({
-            id: participants.userId,
+            userId: participants.userId,
             budgetId: participants.budgetId,
             userExists: sql<boolean>`users.id IS NOT NULL`,
             firstName: users.firstName,
             lastName: users.lastName,
-            displayPhotoThumbnailUrl: users.displayPhotoThumbnailUrl,
-            displayPhotoRawUrl: users.displayPhotoRawUrl,
+            photo: users.photo,
             joinedAt: participants.joinedAt,
         })
         .from(participants)

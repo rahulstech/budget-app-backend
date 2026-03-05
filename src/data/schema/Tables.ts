@@ -88,6 +88,8 @@ export const participants = pgTable('participants', {
   primaryKey({ name: "pk_participants", columns: [table.userId, table.budgetId] }),
 ]);
 
+
+
 export const eventSequence = pgTable("event_sequences", {
   budgetId: uuid('budget_id').primaryKey(),
   
@@ -121,6 +123,7 @@ export const events = pgTable("accepted_events", {
   when: bigint("when", { mode: "number" }).notNull(),
 
   data: json("data"),
+
 }, (table) => [
   index("idx_accepted_events_userId_budgetId_").on(table.userId, table.budgetId)
 ]);
@@ -137,9 +140,7 @@ export const users = pgTable("users", {
 
   email: text("email").notNull(),
 
-  displayPhotoThumbnailUrl: text("thumbnail_url"),
-
-  displayPhotoRawUrl: text("original_url"),
+  photo: text("photo"),
 
   lastModified: bigint("last_modified", { mode: "number" }).notNull(),
 })

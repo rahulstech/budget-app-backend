@@ -43,9 +43,9 @@ export class UserRepoImpl implements UserRepo {
             id: users.id,
             firstName: users.firstName,
             lastName: users.lastName,
-            displayPhotoThumbnailUrl: users.displayPhotoThumbnailUrl,
-            displayPhotoRawUrl: users.displayPhotoRawUrl,
+            photo: users.photo,
         }).from(users).where(eq(users.id, id));
+        
         return row ?? null;
     }
 }

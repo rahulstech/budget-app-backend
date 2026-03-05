@@ -1,7 +1,7 @@
 // Budget DTOs
 
-import { EventType } from "../core/Types.js"
-import { ParticipantUser } from "../data/Models.js"
+import { EventType, Nullable } from "../core/Types.js"
+import { Participant, ParticipantUser, UserPublicInfo } from "../data/Models.js"
 
 export type CreateBudgetDto = {
     eventId: string,

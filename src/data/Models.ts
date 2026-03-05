@@ -1,8 +1,15 @@
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { PgTransaction } from "drizzle-orm/pg-core";
 import { budgets, categories, events, expenses, participants, users } from "./schema/Tables.js";
+import { Nullable } from "../core/Types.js";
 
 export type Database = NodePgDatabase | PgTransaction<any,any,any>;
+
+export type User = typeof users.$inferSelect;
+
+export type UserPublicInfo = Pick<User,"id"|"firstName"|"lastName"|"photo">;
+
+export type UpdateUserModel = Partial<Omit<User,"id">>;
 
 export type Budget = typeof budgets.$inferSelect;
 
@@ -11,6 +18,8 @@ export type UpdateBudgetModel = Partial<Pick<Budget, "title" | "details" | "isDe
 export type SelectBudgetModel = Omit<Budget,"serverCreatedAt"|"isDeleted">
 
 export type Participant = typeof participants.$inferSelect;
+
+export type ParticipantUser = Participant & { userExists: boolean } & Nullable<Omit<UserPublicInfo,"id">>;
 
 export type Category = typeof categories.$inferSelect;
 
@@ -22,26 +31,4 @@ export type UpdateExpenseModel = Partial<Pick<Expense, "date" | "amount" | "note
 
 export type Event = typeof events.$inferSelect;
 
-export type User = typeof users.$inferSelect;
-
-export type UserPublicInfo = {
-    id: string,
-    firstName: string,
-    lastName: string | null,
-    displayPhotoThumbnailUrl: string | null,
-    displayPhotoRawUrl: string | null,
-};
-
-export type ParticipantUser = {
-    id: string,
-    budgetId: string,
-    userExists: boolean,
-    firstName: string | null,
-    lastName: string | null,
-    displayPhotoThumbnailUrl: string | null,
-    displayPhotoRawUrl: string | null,
-    joinedAt: number,
-}
-
-export type UpdateUserModel = Partial<Omit<User,"id">>;
 
