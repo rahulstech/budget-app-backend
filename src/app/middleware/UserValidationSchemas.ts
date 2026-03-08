@@ -15,6 +15,6 @@ export const GetPhotoUploadUrlQuerySchema = z.object({
     size: z.coerce.number().positive()
 })
 
-export const ConfirmPhotoUploadUrlQuerySchema = z.object({
+export const ConfirmPhotoUploadUrlBodySchema = z.object({
     key: z.string(),
 })

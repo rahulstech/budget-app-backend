@@ -3,11 +3,11 @@ import { HttpError } from "../../core/HttpError.js";
 import { logDebug } from "../../core/Logger.js";
 import { BudgetService } from "../../service/BudgetService.js";
 import { CreateBudgetDto } from "../../service/Dtos.js";
-import { ControllerParams } from "../Types.js";
+import { ControllerParams, ResponseModel } from "../Types.js";
 
 
 // Create a budget
-export async function handlePostBudget(service: BudgetService, params: ControllerParams) {
+export async function handlePostBudget(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
   const { userId, body } = params;
 
   if (isDevEnvironment()) {
@@ -28,20 +28,23 @@ export async function handlePostBudget(service: BudgetService, params: Controlle
 }
 
 // Join Participant
-export async function handleJoinPartcipant(service: BudgetService, params: ControllerParams) {
+export async function handleJoinBudget(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
   const { budgetId, userId } = params
-  await service.addParticipant({ budgetId, actorUserId: userId, userId, joinedAt: Date.now() });
-  return true;
+  return await service.addParticipant({ budgetId, actorUserId: userId, userId, joinedAt: Date.now() });
 }
 
 // Leave Participant
-export async function handleLeavePariticipant(service: BudgetService, params: ControllerParams) {
+export async function handleLeaveBudget(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
   const { budgetId, userId } = params;
-  await service.removeParticipant({ budgetId, actorUserId: userId, userId });
+  const result = await service.removeParticipant({ budgetId, actorUserId: userId, userId });
+  return {
+    budgetId: result.budgetId,
+    userId: result.recordId
+  };
 }
 
 // Remove Participant
-export async function handleRemoveParticipant(service: BudgetService, params: ControllerParams) {
+export async function handleRemoveParticipant(service: BudgetService, params: ControllerParams): Promise<void> {
   const { budgetId, userId, participantId } = params;
   await service.removeParticipant({ budgetId, actorUserId: userId, userId: participantId }) 
 }

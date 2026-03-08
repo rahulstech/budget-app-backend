@@ -65,7 +65,7 @@ export class ExpenseRepoImpl implements ExpenseRepo {
             .returning();
         
         if (row && row.version !== expectedVersion+1) {
-            throw new RepoError("VERSION_MISMATCH", { ...row, version: row.version-1 });
+            throw new RepoError("VERSION_MISMATCH");
         }
 
         return row;
@@ -80,7 +80,7 @@ export class ExpenseRepoImpl implements ExpenseRepo {
             .returning();
 
         if (deletedExpense && deletedExpense.version !== expectedVersion) {
-            throw new RepoError("VERSION_MISMATCH", deletedExpense);
+            throw new RepoError("VERSION_MISMATCH");
         }
 
         return typeof deletedExpense !== undefined;

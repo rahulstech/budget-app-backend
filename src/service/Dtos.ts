@@ -31,7 +31,7 @@ export type DeleteBudgetDto = {
 }
 
 export type BudgetDto = {
-    eventId: string,
+    eventId?: string,
     id: string,
     createdBy?: string,
     title?: string,
@@ -170,6 +170,5 @@ export type UserDto = {
     firstName: string,
     lastName: string | null,
     email: string,
-    thumbnailUrl?: string,
-    rawUrl?: string,
+    photo: string | null
 }

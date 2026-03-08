@@ -124,11 +124,6 @@ export class BudgetPolicy {
         if (!await this.lookup.isParticipantOfBudget(budgetId,participantId)) {
             throw new HttpError.Forbidden(BudgetPolicyErrorCode.NOT_PARTICIPANT);
         }
-
-        // either participant removes itself or the budget creator removes the participant
-        if (actorId !== participantId) {
-            await this.isBudgetCreatoryOrThrow(budgetId,actorId);
-        }
     }
 
     /**

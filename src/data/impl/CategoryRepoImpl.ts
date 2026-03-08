@@ -43,7 +43,7 @@ export class CategoryRepoImpl implements CategoryRepo {
         .returning();
 
         if (row && row.version !== expectedVersion+1) {
-            throw new RepoError("VERSION_MISMATCH", { ...row, version: row.version-1 });
+            throw new RepoError("VERSION_MISMATCH");
         }
 
         return row;

@@ -7,7 +7,7 @@ export async function handlePostUser(service: UserService, params: ControllerPar
     return user;
 }
 
-export async function handlePatchUser(service: UserService, params: ControllerParams): Promise<void> {
+export async function handlePutUser(service: UserService, params: ControllerParams): Promise<void> {
     const { userId, firstName, lastName, email } = params;
     await service.updateUser(userId, { firstName, lastName, email });
 }
@@ -36,7 +36,6 @@ export async function handleGetPhotoUploadUrl(service: UserService, params: Cont
 
 export async function handleConfirmPhotoUploadUrl(service: UserService, params: ControllerParams): Promise<ResponseModel> {
     const { userId, key } = params;
-    console.log(`userId ${userId} key ${key}`);
     const publicUrl = await service.markUploaded(userId, key);
     return { photo: publicUrl };
 }

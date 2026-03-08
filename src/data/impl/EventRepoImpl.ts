@@ -2,8 +2,6 @@ import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
 import { EventRepo } from "../EventRepo.js";
 import { events } from "../schema/Tables.js";
 import { Database, Event } from "../Models.js";
-import { isDevEnvironment } from "../../core/Environment.js";
-import { logDebug } from "../../core/Logger.js";
 
 export class EventRepoImpl implements EventRepo {
 
@@ -30,10 +28,6 @@ export class EventRepoImpl implements EventRepo {
         budgetId: string, excludeUserId: string, lastSequence: number, itemCount: number = 20
     ): Promise<Omit<Event,"serverCreatedAt">[]> {
         const safeItemCount = Math.min(itemCount, 100); // hard cap
-
-        if (isDevEnvironment()) {
-            logDebug("eventrepo.getbudgetevents", { lastSequence, itemCount });
-        }
 
         return await this.db
             .select({

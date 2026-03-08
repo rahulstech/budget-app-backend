@@ -53,7 +53,6 @@ export class ParticipantRepoImpl implements ParticipantRepo {
             eq(participants.userId, userId),
             eq(participants.budgetId,budgetId)
         ));
-
         return row ?? null;
     }
 }

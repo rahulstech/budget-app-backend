@@ -3,6 +3,7 @@ import { HttpError } from "../core/HttpError.js";
 import { UpdateUserModel, User, UserPublicInfo } from "../data/Models.js";
 import { RepoClient } from "../data/RepoClient.js";
 import { UserRepo } from "../data/UserRepo.js";
+import { UserDto } from "./Dtos.js";
 import { StorageService } from "./StorageService.js";
 
 const MAX_PHOTO_SIZE = 5242880; // 5 mb
@@ -34,7 +35,7 @@ export class UserService {
         this.userRepo = factory.createUserRepo();
     }
 
-    async createUser(dto: CreateUserDto): Promise<User> {
+    async createUser(dto: CreateUserDto): Promise<UserDto> {
         const user: User = {
             ...dto,
             photo: null,

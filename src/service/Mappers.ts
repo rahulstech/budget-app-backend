@@ -69,7 +69,7 @@ export function toParticipant(dto: AddParticipantDto): Participant {
 export function toBudgetDto(budget: any, participant?: ParticipantDto): BudgetDto {
     const { eventId, id, createdBy, title, details, version, offlineLastModified } = budget;
     return {
-       eventId, id, createdBy, title, details: details ?? undefined, version, offlineLastModified, participant
+       eventId, id, createdBy, title, details, version, offlineLastModified, participant
     }
 }
 
@@ -89,7 +89,7 @@ export function toExpenseDto(expense: any): ExpenseDto {
 
 export function toEventDto(value: any): EventDto {
     const { id, type: event, sequence, budgetId, userId: actorId, recordId, when, data } = value;
-    return {
+    const dto: EventDto = {
         eventId: id,
         event,
         sequence,
@@ -97,19 +97,20 @@ export function toEventDto(value: any): EventDto {
         actorId,
         recordId,
         when,
-        ...(data ?? {})
+        ...(data || {}),
     };
+
+    return dto;
 }
 
 export function toUserDto(user: any): UserDto {
-    const { id, firstName, lastName, email, displayPhotoRawUrl, displayPhotoThumbnailUrl } = user;
+    const { id, firstName, lastName, email, photo } = user;
     return {
         id,
         firstName,
         lastName: lastName ?? undefined,
         email,
-        thumbnailUrl: displayPhotoThumbnailUrl,
-        rawUrl: displayPhotoRawUrl,
+        photo,
     };
 }
 

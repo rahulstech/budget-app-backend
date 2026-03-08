@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { GetBudgetsQuerySchema, PostBudgetBodySchema, SnapShotQuerySchema } from "../middleware/BudgetValidationSchemas.js";
 import { asyncHandler } from "../Helper.js";
 import { validateBody, validateQuery } from "../middleware/Validators.js";
-import { handleGetBudgetsOfParticipant, handleGetSnapShot, handleJoinPartcipant, handleLeavePariticipant, handlePostBudget, handleRemoveParticipant } from "../controller/BudgetController.js";
+import { handleGetBudgetsOfParticipant, handleGetSnapShot, handleJoinBudget, handleLeaveBudget, handlePostBudget, handleRemoveParticipant } from "../controller/BudgetController.js";
 import { isDevEnvironment } from "../../core/Environment.js";
 import { logDebug } from "../../core/Logger.js";
 
@@ -74,9 +74,9 @@ budgetRouter.get(buildRoute("join"),
     const userId = req.userId
     const service = req.budgetService;
 
-    await handleJoinPartcipant(service, { budgetId, userId });
+    const response = await handleJoinBudget(service, { budgetId, userId });
 
-    res.sendStatus(200);
+    res.status(200).json(response);
   }));
 
 // leave budget as participant
@@ -86,9 +86,9 @@ budgetRouter.delete(buildRoute("leave"),
     const userId = req.userId;
     const service = req.budgetService;
 
-    await handleLeavePariticipant(service, { budgetId, userId });
+    const response = await handleLeaveBudget(service, { budgetId, userId });
 
-    res.sendStatus(200);
+    res.status(200).json(response);
   }));
 
 // remove a participant from budget

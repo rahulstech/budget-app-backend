@@ -1,8 +1,9 @@
 import { Request, Response, Router } from "express";
 import { asyncHandler } from "../Helper.js";
 import { validateBody, validateQuery } from "../middleware/Validators.js";
-import { ConfirmPhotoUploadUrlQuerySchema, CreateUserBodySchema, GetPhotoUploadUrlQuerySchema, UpdateUserBodySchema } from "../middleware/UserValidationSchemas.js";
-import { handleConfirmPhotoUploadUrl, handleDeleteUser, handleGetPhotoUploadUrl, handleGetUser, handleGetUserPublicInfo, handlePatchUser, handlePostUser } from "../controller/UserController.js";
+import { ConfirmPhotoUploadUrlBodySchema, CreateUserBodySchema, GetPhotoUploadUrlQuerySchema, UpdateUserBodySchema } from "../middleware/UserValidationSchemas.js";
+import { handleConfirmPhotoUploadUrl, handleDeleteUser, handleGetPhotoUploadUrl, handleGetUser, handleGetUserPublicInfo
+    , handlePostUser, handlePutUser } from "../controller/UserController.js";
 
 export const userRouter = Router();
 
@@ -18,14 +19,14 @@ userRouter.post("/user",
         res.status(201).json(response);
     }));
 
-userRouter.patch("/user",
+userRouter.put("/user",
     validateBody(UpdateUserBodySchema),
     asyncHandler(async (req: Request, res: Response)=> {
         const userId = req.userId;
         const body = req.validatedBody!;
         const service = req.userService;
 
-        await handlePatchUser(service, { userId, ...body });
+        await handlePutUser(service, { userId, ...body });
 
         res.sendStatus(200);
     }))
@@ -63,13 +64,13 @@ userRouter.get("/user/photo-upload-url",
 )
 
 userRouter.put("/user/photo-upload-confirm",
-    validateQuery(ConfirmPhotoUploadUrlQuerySchema),
+    validateQuery(ConfirmPhotoUploadUrlBodySchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const query = req.validatedQuery!!;
+        const body = req.validatedBody!!;
         const userId = req.userId;
         const userService = req.userService;
 
-        const response = await handleConfirmPhotoUploadUrl(userService, { userId, ...query });
+        const response = await handleConfirmPhotoUploadUrl(userService, { userId, ...body });
 
         res.status(201).json(response)
     })
