@@ -21,7 +21,7 @@ async function main() {
             firstName: "Amit",
             lastName: "Sharma",
             email: "amit.sharma@email.com",
-            photo: null,
+            photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo1.jpg",
             lastModified: Date.now()
         },
         {
@@ -29,7 +29,7 @@ async function main() {
             firstName: "Neha",
             lastName: "Verma",
             email: "neha.verma@email.com",
-            photo: null,
+            photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo2.jpg",
             lastModified: Date.now()
         },
         {
@@ -37,7 +37,7 @@ async function main() {
             firstName: "Priya",
             lastName: "Sen",
             email: "priya.sen@email.com",
-            photo: null,
+            photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo3.jpg",
             lastModified: Date.now()
         },
         {
@@ -45,7 +45,7 @@ async function main() {
             firstName: "Arjun",
             lastName: "Mehta",
             email: "arjun.mehta.verma@email.com",
-            photo: null,
+            photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo4.jpg",
             lastModified: Date.now()
         },
         {
@@ -53,7 +53,7 @@ async function main() {
             firstName: "Pranab",
             lastName: "Rathor",
             email: "pranab.rathor@email.com",
-            photo: null,
+            photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo5.jpg",
             lastModified: Date.now()
         }
     ]

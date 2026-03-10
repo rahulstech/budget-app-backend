@@ -10,7 +10,10 @@ export class HttpError extends AppError {
     readonly issues?: HttpError.ErrorItem[]
 
     constructor(readonly statusCode: number, issue?: string | HttpError.ErrorItem[]) {
-        super(getHttpStatusMessage(statusCode), false);
+        super(
+            typeof issue === "string" ? issue : getHttpStatusMessage(statusCode), 
+            false
+        );
         this.statusCode = statusCode;
         if (typeof issue === "string") {
             this.issues = [issue];

@@ -23,3 +23,8 @@ export type PagedResult<K,T> = {
 export type Nullable<T> = {
   [k in keyof T]: T[k] | null;
 }
+
+export type HttpResponseError = {
+  statusCode: number,
+  message: string,
+}

@@ -4,9 +4,10 @@ import express, { Express, Request, Response, NextFunction } from "express";
 import { HttpError } from "../core/HttpError.js";
 import { httpLogger } from "./middleware/LoggerMiddleware.js";
 import { checkApiKey, extractUserId } from "./middleware/SecurityMiddleware.js";
-import { userRouter } from "./router/UserRouter.js";
+import { noauthUserRoutes, userRouter } from "./router/UserRouter.js";
 import { UserService } from "../service/UserService.js";
 import { eventRouter } from "./router/EventRouter.js";
+import { AppError } from "../core/AppError.js";
 
 
 export function createApp(budgetService: BudgetService, userService: UserService): Express {
@@ -18,7 +19,7 @@ export function createApp(budgetService: BudgetService, userService: UserService
 
     app.use(httpLogger());
 
-    app.use(extractUserId());
+
 
     app.use((req: Request, _res: Response, next: NextFunction)=> {
         req.budgetService = budgetService;
@@ -27,7 +28,12 @@ export function createApp(budgetService: BudgetService, userService: UserService
     });
 
     /**
-     * app routes
+     * no auth app routes
+     */
+    app.use(noauthUserRoutes);
+
+    /**
+     * authorized app routes
      */
     app.use(budgetRouter);
 
@@ -47,11 +53,25 @@ export function createApp(budgetService: BudgetService, userService: UserService
      */
     app.use((err: Error, req: Request, res: Response, _next: NextFunction)=> {
         if (err instanceof HttpError) {
-            res.status(err.statusCode).json({ errors: err.flatten() });
+            res.status(err.statusCode)
+            .json({ 
+                error: {
+                    statusCode: err.statusCode,
+                    message: err.message
+                }
+             });
+        }
+        else if (err instanceof AppError) {
+            res.status(500)
+            .json({ 
+                error: {
+                    statusCode: 500,
+                    message: err.message
+                }
+             });
         }
         else {
-            req.logger.error("internal server error", err);
-            res.status(500).json({ errors: ["internal server error"] });
+            res.sendStatus(500);
         }
     });
 

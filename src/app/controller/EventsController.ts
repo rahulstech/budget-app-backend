@@ -1,7 +1,6 @@
 import { HttpError } from "../../core/HttpError.js";
-import { logError } from "../../core/Logger.js";
 import { mapZodErrorToHttpError } from "../../core/Mappers.js";
-import { EventType } from "../../core/Types.js";
+import { EventType, HttpResponseError } from "../../core/Types.js";
 import { BudgetService } from "../../service/BudgetService.js";
 import { EventDto } from "../../service/Dtos.js";
 import { EventSchema } from "../middleware/EventValidationSchemas.js";
@@ -189,19 +188,24 @@ async function callServiceForEvent(service: BudgetService, event: EventBodyModel
 
 function normalizeFailure(body: any, err: any): ResponseModel {
   const { eventId, event, budgetId, recordId } = body;
-  let errors: string[] = [];
+  let error: HttpResponseError;
   if (err instanceof HttpError) {
-    errors = err.flatten();
+    error = {
+      statusCode: err.statusCode,
+      message: err.message,
+    }
   }
   else {
-    logError("eventscontroller.normalizefailure", { eventId, event, budgetId, recordId, err });
-    errors = ["INTERNAL_ERROR"];
+    error = {
+      statusCode: 500,
+      message: err.message ?? "INTERNAL_SERVER_ERROR"
+    };
   }
   return {
       eventId,
       event,
       budgetId,
       recordId,  
-      errors
+      error
   };
 }

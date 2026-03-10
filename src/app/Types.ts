@@ -1,8 +1,13 @@
 import z from "zod";
 import { PostBudgetBodySchema } from "./middleware/BudgetValidationSchemas.js";
 import { EventSchema, PostEventsBodySchema } from "./middleware/EventValidationSchemas.js";
+import { HttpResponseError } from "../core/Types.js";
 
-export type ResponseModel = { [key: string]: any, errors?: string[] };
+export type ResponseModel = { 
+    [key: string]: any, 
+    error?: HttpResponseError,
+};
+
 
 export type ControllerParams = {
     [key: string]: any,

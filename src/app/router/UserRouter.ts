@@ -76,7 +76,10 @@ userRouter.put("/user/photo-upload-confirm",
     })
 )
 
-userRouter.get("/users/:userId",asyncHandler(async (req: Request, res: Response)=> {
+
+export const noauthUserRoutes = Router();
+
+noauthUserRoutes.get("/users/:userId",asyncHandler(async (req: Request, res: Response)=> {
     const params = req.params;
     const userService = req.userService;
 

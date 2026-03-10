@@ -18,9 +18,7 @@ import { AppError } from "../core/AppError.js";
 import { HttpError } from "../core/HttpError.js";
 import { EventType, PagedResult } from "../core/Types.js";
 import { BudgetRepo } from "../data/BudgetRepo.js";
-import { isDevEnvironment } from "../core/Environment.js";
-import { logDebug, logError } from "../core/Logger.js";
-import { Participant, ParticipantUser } from "../data/Models.js";
+import { ParticipantUser } from "../data/Models.js";
 
 const MAX_RESULTS = 100;
 
@@ -55,12 +53,23 @@ export class BudgetService {
      * - Sync event recorded
      */
     async createBudget(dto: CreateBudgetDto): Promise<EventDto> {
+
+        const factory = this.client.getRepoFactory();
+        const oldEvent = await this.getEventById(dto.eventId);
+        if (oldEvent !== null) {
+            const { eventId, event, budgetId, actorId, version } = oldEvent;
+            const participant = await this.getParticipantById(factory,actorId,budgetId);
+            return {
+                eventId,
+                event,
+                budgetId,
+                version,
+                participant,
+            };
+        }
+
         try {
             await this.policy.canAddBudget(dto.id);
-
-            if (isDevEnvironment()) {
-                logDebug("budgetservice.createbudget.dto",dto)
-            }
 
             return await this.client.runInTransaction(async (factory) => {
                 const budgetRepo = factory.createBudgetRepo();
@@ -91,26 +100,6 @@ export class BudgetService {
             });
         }
         catch(err: any) {
-            if (isDevEnvironment()) {
-                logError("budgetservice.createbudget.err",{err})
-            }
-
-            if (this.isBudgetPolicyError(err,BudgetPolicyErrorCode.BUDGET_EXISTS)) {
-                const factory = this.client.getRepoFactory();
-                const oldEvent = await this.getEventById(dto.eventId);
-                if (oldEvent !== null) {
-                    const { eventId, event, budgetId, actorId, version } = oldEvent;
-                    const participant = await this.getParticipantById(factory,actorId,budgetId);
-                    return {
-                        eventId,
-                        event,
-                        budgetId,
-                        version,
-                        participant,
-                    };
-                }
-            }
-
             throw this.mapError(err);
         }
     }
@@ -269,7 +258,7 @@ export class BudgetService {
         try {
             await this.policy.canAddParticipant(dto.budgetId, dto.userId);
 
-            return this.client.runInTransaction(async (factory) => {
+            return await this.client.runInTransaction(async (factory) => {
                     const { participant } = await this.insertParticipant(factory, dto);
                     const budget = await factory.createBudgetRepo().getBudgetById(dto.budgetId);
                     return {
@@ -315,25 +304,30 @@ export class BudgetService {
     async removeParticipant(dto: RemoveParticipantDto): Promise<EventDto> {
         const { budgetId, userId, actorUserId } = dto;
 
-        await this.policy.canRemoveParticipant(budgetId, actorUserId, userId);
+        try {
+            await this.policy.canRemoveParticipant(budgetId, actorUserId, userId);
 
-        return this.client.runInTransaction(async (factory) => {
-            const participantRepo = factory.createParticipantRepo();
-            const eventRepo = factory.createEventRepo();
-        
-            try {
-                // mark participant left
-                await participantRepo.deleteParticipant(budgetId, userId);
+            return this.client.runInTransaction(async (factory) => {
+                const participantRepo = factory.createParticipantRepo();
+                const eventRepo = factory.createEventRepo();
+            
+                try {
+                    // mark participant left
+                    await participantRepo.deleteParticipant(budgetId, userId);
 
-                // record event
-                const event = await eventRepo.insertEvent(EventBuilder.removeParticipant(dto));
+                    // record event
+                    const event = await eventRepo.insertEvent(EventBuilder.removeParticipant(dto));
 
-                return toEventDto(event);
-            }
-            catch (error: any) {
-                throw this.mapError(error);
-            }
-        });
+                    return toEventDto(event);
+                }
+                catch (error: any) {
+                    throw this.mapError(error);
+                }
+            });
+        }
+        catch(err: any) {
+            throw this.mapError(err);
+        }
     }
 
     /* =========================================================
@@ -676,7 +670,6 @@ export class BudgetService {
         }
         catch(err: any) {
             if (this.isVersionMisMatchError(err)) {
-                if (this.isVersionMisMatchError(err)) {
                 const repo = this.client.getRepoFactory().createExpenseRepo();
                 const expense = (await repo.getExpenseById(dto.id))!;
                 return {
@@ -685,7 +678,6 @@ export class BudgetService {
                     budgetId: dto.budgetId,
                     currentRecord: toExpenseDto(expense)
                 };
-            }
             }
             throw this.mapError(err);
         }
@@ -709,33 +701,38 @@ export class BudgetService {
      */
     async getEvents(budgetId: string, userId: string, key: number = 0, count: number = MAX_RESULTS): Promise<EventDto[]> {
 
-        await this.policy.canSyncEvents(budgetId,userId);
-        
-        return this.client.runInTransaction(async (factory) => {
-            const eventRepo = factory.createEventRepo();
+        try {
+            await this.policy.canSyncEvents(budgetId,userId);
+            
+            return await this.client.runInTransaction(async (factory) => {
+                const eventRepo = factory.createEventRepo();
 
-            const lastSequence = Math.max(0,key);
-            const itemCount = Math.min(MAX_RESULTS, count);
+                const lastSequence = Math.max(0,key);
+                const itemCount = Math.min(MAX_RESULTS, count);
 
-            // retrieve events from repo (exclude events generated by requesting user)
-            const events = await eventRepo.getBudgetEvents(budgetId, userId, lastSequence, itemCount);
+                // retrieve events from repo (exclude events generated by requesting user)
+                const events = await eventRepo.getBudgetEvents(budgetId, userId, lastSequence, itemCount);
 
-            const dtos: EventDto[] = []
+                const dtos: EventDto[] = []
 
-            for(const event of events) {
-                if (event.type === EventType.ADD_PARTICIPANT) {
-                    const participant = await this.getParticipantById(factory,event.userId,event.budgetId);
-                    dtos.push({
-                        ...toEventDto(event),
-                        participant
-                    });
+                for(const event of events) {
+                    if (event.type === EventType.ADD_PARTICIPANT) {
+                        const participant = await this.getParticipantById(factory,event.userId,event.budgetId);
+                        dtos.push({
+                            ...toEventDto(event),
+                            participant
+                        });
+                    }
+                    else {
+                        dtos.push(toEventDto(event));
+                    }
                 }
-                else {
-                    dtos.push(toEventDto(event));
-                }
-            }
-            return dtos;
-        });
+                return dtos;
+            });
+        }
+        catch(err: any) {
+            throw this.mapError(err);
+        }
     }
 
     /* =========================================================
@@ -791,6 +788,6 @@ export class BudgetService {
         else if (error instanceof AppError) {
             return error;
         }
-        return new AppError("BudgetService", true, error);
+        return new AppError("INTERNAL_SERVER_ERROR", true, error);
     }
 }
