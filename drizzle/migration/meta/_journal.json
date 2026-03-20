@@ -5,29 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772542967712,
-      "tag": "0000_rainy_sasquatch",
+      "when": 1774004173710,
+      "tag": "0000_lethal_pretty_boy",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1772542995838,
-      "tag": "0001_wise_mister_fear",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772544689969,
-      "tag": "0002_romantic_justice",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772739907552,
-      "tag": "0003_blue_gamora",
+      "when": 1774004180307,
+      "tag": "0001_wandering_sway",
       "breakpoints": true
     }
   ]

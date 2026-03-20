@@ -1,11 +1,10 @@
-import { Environment } from "../core/Environment.js";
-import { CopyObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, S3ServiceException } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, S3ServiceException } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
-import { AppError } from "../core/AppError.js";
+import { Environment } from "../../core/Environment.js";
+import { StorageError } from "./StorageError.js";
+
 
 const {
-    AWS_ID,
-    AWS_SECRET,
     S3_REGION,
     S3_BUCKET,
     CDN_BASE_URL,
@@ -13,24 +12,9 @@ const {
  } = Environment;
 
 
-const DEFAULT_SIGNED_URL_EXPIRY = 300; // 5 minute
+const DEFAULT_SIGNED_URL_EXPIRY = 1800; // 30 minute
 
-const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024 // 1 GB
-
-export class StorageError extends AppError {
-
-    constructor(readonly code: StorageError.ErrorCode, shouldShutdown: boolean = false, reason: any = null) {
-        super(code,shouldShutdown,reason);
-    }
-}
-
-export namespace StorageError {
-
-    export type ErrorCode = 
-    | 'size-exceed'
-    | 'client-error'
-    | 'unknown-error'
-}
+const MAX_UPLOAD_SIZE = 1024 * 1024 * 20 // 20mb
 
 export class StorageService {
 
@@ -39,10 +23,18 @@ export class StorageService {
     constructor() {
         this.client = new S3Client({ 
             region: S3_REGION,
-            credentials: {
-                accessKeyId: AWS_ID,
-                secretAccessKey: AWS_SECRET,
-            },
+            // inside lamda, it provides temporary credentials(accesskey and secretkey).
+            // if i explicitly set credentials here, then i will bypass
+            // those temporary credentials. so don't set credentials which is not recommended by AWS.
+            // if not explicit credentials not set, sdk sets accesskey and secretkey from environment
+            // or aws configuration file which ever is available. environment variables are
+            // AWS_ACCESS_KEY
+            // AWS_SECRET_KEY
+            // in dev environment set these values in dev.env so sdk will read these from environment.
+            // credentials: {
+            //     accessKeyId: AWS_ID,
+            //     secretAccessKey: AWS_SECRET,
+            // },
         });
     }
 
@@ -50,7 +42,7 @@ export class StorageService {
         const { key, contentLength, contentType, expiresInSeconds } = inputs;
 
         if (contentLength > MAX_UPLOAD_SIZE) {
-            throw new StorageError('size-exceed');
+            throw new StorageError("MEDIA_TOO_BIG", { size: contentLength });
         }
 
         const command = new PutObjectCommand({
@@ -87,6 +79,19 @@ export class StorageService {
         }
     }
 
+    async delete(key: string): Promise<void> {
+        try {
+            await this.client.send(new DeleteObjectCommand({
+                Bucket: S3_BUCKET,
+                Key: key,
+            }));
+        }
+        catch(err: any) {
+            throw this.toStorageError(err);
+        }
+    }
+
+
     async exists(key: string): Promise<boolean> {
         const command = new HeadObjectCommand({
             Bucket: S3_BUCKET,
@@ -112,18 +117,7 @@ export class StorageService {
     }
 
     private toStorageError(err: any): StorageError {
-        if (err instanceof S3ServiceException) {
-            if (err.$metadata.httpStatusCode) {
-                if (err.$metadata.httpStatusCode >= 500) {
-                    new StorageError('client-error', true, err);
-                }
-                else {
-                    new StorageError('client-error', false);
-                }
-            }
-        }
-
-        return new StorageError('unknown-error', true, err);
+        return new StorageError("INTERNAL_ERROR", null, true, err);
     }
 }
 

@@ -3,6 +3,7 @@ import { budgets, categories, expenses, participants, events } from "../schema/T
 import { and, count, desc, eq } from "drizzle-orm";
 import { Database } from "../Models.js";
 import { EventType } from "../../core/Types.js";
+import { RepoError } from "../RepoError.js";
 
 export class LookupRepoImpl implements LookupRepo {
 
@@ -11,157 +12,159 @@ export class LookupRepoImpl implements LookupRepo {
   /* ================= Budget ================= */
 
   async budgetExists(budgetId: string, ignoreDeleted: boolean = false): Promise<boolean> {
-    const [budget] = await this.db
-      .select({ isDeleted: budgets.isDeleted })
-      .from(budgets)
-      .where(eq(budgets.id, budgetId))
-      .limit(1)
+    try {
+      const [budget] = await this.db
+        .select({ isDeleted: budgets.isDeleted })
+        .from(budgets)
+        .where(eq(budgets.id, budgetId))
+        .limit(1)
 
-    if (budget) {
-      return ignoreDeleted || !budget.isDeleted;
+      if (budget) {
+        return ignoreDeleted || !budget.isDeleted;
+      }
+
+      return false;
     }
-
-    return false;
+    catch (error: any) {
+      throw RepoError.create({
+        error,
+        message: "budget exists check failed"
+      });
+    }
   }
 
   async isCreatorOfBudget(budgetId: string, userId: string): Promise<boolean> {
-    const row = await this.db
-      .select({ id: budgets.id })
-      .from(budgets)
-      .where(
-        and(
-          eq(budgets.id, budgetId),
-          eq(budgets.createdBy, userId)
+    try {
+      const row = await this.db
+        .select({ id: budgets.id })
+        .from(budgets)
+        .where(
+          and(
+            eq(budgets.id, budgetId),
+            eq(budgets.createdBy, userId)
+          )
         )
-      )
-      .limit(1)
+        .limit(1)
 
-    return row.length > 0
-  }
-
-  /* ================= Category ================= */
-
-  async categoryExists(categoryId: string): Promise<boolean> {
-    const row = await this.db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(eq(categories.id, categoryId))
-      .limit(1)
-
-    return row.length > 0
-  }
-
-  async isCategoryOfBudget(budgetId: string,categoryId: string): Promise<boolean> {
-    const row = await this.db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(
-        and(
-          eq(categories.id, categoryId),
-          eq(categories.budgetId, budgetId)
-        )
-      )
-      .limit(1)
-
-    return row.length > 0;
+      return row.length > 0
+    }
+    catch (error: any) {
+      throw RepoError.create({
+        error,
+        message: "is creator of budget check failed"
+      });
+    }
   }
 
   /* ================= Expense ================= */
-
-  async expenseExists(expenseId: string): Promise<boolean> {
-    const row = await this.db
-      .select({ id: expenses.id })
-      .from(expenses)
-      .where(eq(expenses.id, expenseId))
-      .limit(1)
-
-    return row.length > 0
-  }
 
   async isCreatorOfExpense(
     expenseId: string,
     userId: string
   ): Promise<boolean> {
-    const row = await this.db
-      .select({ id: expenses.id })
-      .from(expenses)
-      .where(
-        and(
-          eq(expenses.id, expenseId),
-          eq(expenses.createdBy, userId)
+    try {
+      const row = await this.db
+        .select({ id: expenses.id })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.id, expenseId),
+            eq(expenses.createdBy, userId)
+          )
         )
-      )
-      .limit(1)
+        .limit(1)
 
-    return row.length > 0
+      return row.length > 0
+    }
+    catch (error: any) {
+      throw RepoError.create({
+        error,
+        message: "is creator of expense check failed"
+      });
+    }
   }
 
   /* ================= Participants ================= */
 
-  /**
-   * Checks whether a user was a participant of a budget
-   * at a specific moment in time.
-   *
-   * joinedAtMillis <= atMillis
-   * AND (leftAtMillis IS NULL OR leftAtMillis > atMillis)
-   */
   async wasParticipantAtTime(
     budgetId: string,
     userId: string,
     atMillis: number
   ): Promise<boolean> {
+    try {
+      const [resultLastAdded] = await this.db.select({ whenLastAdded: events.when }).from(events)
+      .where(and(
+        eq(events.budgetId, budgetId),
+        eq(events.type, EventType.ADD_PARTICIPANT),
+        eq(events.recordId, userId))
+      )
+      .orderBy(desc(events.serverCreatedAt))
+      .limit(1);
 
-    const [resultLastAdded] = await this.db.select({ whenLastAdded: events.when }).from(events)
-    .where(and(
-      eq(events.budgetId, budgetId),
-      eq(events.type, EventType.ADD_PARTICIPANT),
-      eq(events.recordId, userId))
-    )
-    .orderBy(desc(events.serverCreatedAt))
-    .limit(1);
+      if (!resultLastAdded) {
+        return false;
+      }
 
-    if (!resultLastAdded) {
-      // not an participant
-      return false;
+      const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.when }).from(events)
+      .where(and(
+        eq(events.budgetId, budgetId),
+        eq(events.type, EventType.REMOVE_PARTICIPANT),
+        eq(events.recordId, userId))
+      )
+      .orderBy(desc(events.serverCreatedAt))
+      .limit(1);
+
+      if (!resultLastRemoved) {
+        return resultLastAdded.whenLastAdded <= atMillis;
+      }
+
+      return resultLastRemoved.whenLastRemoved < resultLastAdded.whenLastAdded 
+                && resultLastAdded.whenLastAdded <= atMillis;
     }
-
-    const [resultLastRemoved] = await this.db.select({ whenLastRemoved: events.when }).from(events)
-    .where(and(
-      eq(events.budgetId, budgetId),
-      eq(events.type, EventType.REMOVE_PARTICIPANT),
-      eq(events.recordId, userId))
-    )
-    .orderBy(desc(events.serverCreatedAt))
-    .limit(1);
-
-    if (!resultLastRemoved) {
-      return resultLastAdded.whenLastAdded <= atMillis;
+    catch (error: any) {
+      throw RepoError.create({
+        error,
+        message: "was participant at time check failed"
+      });
     }
-
-    return resultLastRemoved.whenLastRemoved < resultLastAdded.whenLastAdded 
-              && resultLastAdded.whenLastAdded <= atMillis;
   }
 
   async countBudgetParticipants(budgetId: string): Promise<number> {
-        const [row] = await this.db
-            .select({
-                count: count(participants.budgetId)
-            })
-            .from(participants)
-            .where(eq(participants.budgetId, budgetId));
-        
-        return row?.count;
+    try {
+      const [row] = await this.db
+          .select({
+              count: count(participants.budgetId)
+          })
+          .from(participants)
+          .where(eq(participants.budgetId, budgetId));
+      
+      return row?.count;
     }
-    
-    async isParticipantOfBudget(budgetId: string, userId: string): Promise<boolean> {
-        const results = await this.db
-            .select({ userId: participants.userId })
-            .from(participants)
-            .where(and(
-                eq(participants.budgetId, budgetId),
-                eq(participants.userId, userId)
-            ));
+    catch (error: any) {
+      throw RepoError.create({
+        error,
+        message: "count budget participants failed"
+      });
+    }
+  }
+  
+  async isParticipantOfBudget(budgetId: string, userId: string): Promise<boolean> {
+    try {
+      const results = await this.db
+          .select({ userId: participants.userId })
+          .from(participants)
+          .where(and(
+              eq(participants.budgetId, budgetId),
+              eq(participants.userId, userId)
+          ));
 
-        return results.length > 0;
+      return results.length > 0;
     }
+    catch (error: any) {
+      throw RepoError.create({
+        error,
+        message: "is participant of budget check failed"
+      });
+    }
+  }
 }

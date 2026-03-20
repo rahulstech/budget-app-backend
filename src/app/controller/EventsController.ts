@@ -1,7 +1,7 @@
 import { HttpError } from "../../core/HttpError.js";
 import { mapZodErrorToHttpError } from "../../core/Mappers.js";
 import { EventType, HttpResponseError } from "../../core/Types.js";
-import { BudgetService } from "../../service/BudgetService.js";
+import { BudgetService } from "../../service/budget/BudgetService.js";
 import { EventDto } from "../../service/Dtos.js";
 import { EventSchema } from "../middleware/EventValidationSchemas.js";
 import { ControllerParams, EventBodyModel, ResponseModel } from "../Types.js";

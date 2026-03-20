@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, bigint, integer, numeric, json, index, primaryKey, date, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, bigint, integer, numeric, json, index, primaryKey, date, boolean, foreignKey } from "drizzle-orm/pg-core";
 
 const CommonFields = {
 
@@ -40,12 +40,12 @@ export const categories = pgTable('categories', {
     // currency stored as numeric(12,2). change precision/scale if needed.
     allocate: numeric('allocate', { precision: 12, scale: 2 }).notNull(),
 
-    budgetId: text('budget_id').notNull(),
+    budgetId: uuid('budget_id').notNull().references(()=> budgets.id, { onDelete: "cascade" }),
 
     ...CommonFields
 
 }, (table) => [
-  index('idx_categories_budgetId').on(table.budgetId),
+  index('idx_categories_budgetId').on(table.budgetId)
 ]);
 
 
@@ -54,9 +54,9 @@ export const expenses = pgTable('expenses', {
   // client sent global id as primary key
   id: uuid('id').primaryKey(),
 
-  budgetId: uuid('budget_id').notNull(),
+  budgetId: uuid('budget_id').notNull().references(()=> budgets.id, { onDelete: "cascade" }),
   
-  categoryId: uuid('category_id').notNull(),
+  categoryId: uuid('category_id').notNull().references(()=> categories.id, { onDelete: "cascade" }),
 
   // iso format date of expense
   date: date("date", { mode: "string" }).notNull(),
@@ -77,7 +77,7 @@ export const expenses = pgTable('expenses', {
 export const participants = pgTable('participants', {
 
   // budget where the participant is added
-  budgetId: uuid('budget_id').notNull(),
+  budgetId: uuid('budget_id').notNull().references(()=> budgets.id, { onDelete: "cascade" }),
 
   // auth system id for the participant
   userId: text('user_id').notNull(),
@@ -134,13 +134,19 @@ export const events = pgTable("accepted_events", {
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
 
-  firstName: text("first_name").notNull(),
+  firstName: text("first_name"),
 
   lastName: text("last_name"),
 
-  email: text("email").notNull(),
+  email: text("email"),
 
   photo: text("photo"),
 
+  photoKey: text("photo_key"),
+
   lastModified: bigint("last_modified", { mode: "number" }).notNull(),
 })
+
+export const BUDGET_DB_FK = {
+  "fk_expenses_budgetId_budgets_id": "fk_expenses_budgetId_budgets_id"
+} 

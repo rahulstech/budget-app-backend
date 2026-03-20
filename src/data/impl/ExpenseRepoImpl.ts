@@ -1,8 +1,8 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { ExpenseRepo } from "../ExpenseRepo.js";
 import { expenses } from "../schema/Tables.js";
 import { Database, Expense, UpdateExpenseModel } from "../Models.js";
-import { RepoError } from "../RepoError.js";
+import { RecordNotFound, RepoError, VersionMismatchError } from "../RepoError.js";
 
 export class ExpenseRepoImpl implements ExpenseRepo {
 
@@ -11,22 +11,42 @@ export class ExpenseRepoImpl implements ExpenseRepo {
     /* ================= Insert ================= */
 
     async insertExpense(expense: Expense): Promise<Expense> {
-        const [row] = await this.db
-            .insert(expenses)
-            .values(expense)
-            .returning();
-        return row;
+        try {
+            const [row] = await this.db
+                .insert(expenses)
+                .values(expense)
+                .returning()
+                .onConflictDoNothing();
+            return row;
+        }
+        catch (error: any) {
+            throw RepoError.create({
+                error,
+                context: { budgetId: expense.budgetId, categoryId: expense.categoryId, id: expense.id },
+                message: "insert expense failed"
+            });
+        }
     }
 
     async getExpenseById(id: string): Promise<Expense | null> {
-        const [row] = await this.db.select().from(expenses).where(eq(expenses.id, id));
-        return row || null;
+        try {
+            const [row] = await this.db.select().from(expenses).where(eq(expenses.id, id));
+            return row ?? null;
+        }
+        catch (error: any) {
+            throw RepoError.create({
+                error,
+                context: { id },
+                message: "get expense by id failed"
+            });
+        }
     }
 
     async getExpenses(
         budgetId: string, limit: number, offset: number = 20
     ): Promise<Omit<Expense,"serverCreatedAt">[]> {
-        return await this.db
+        try {
+            return await this.db
                 .select({
                     id: expenses.id,
                     budgetId: expenses.budgetId,
@@ -43,6 +63,14 @@ export class ExpenseRepoImpl implements ExpenseRepo {
                 .orderBy(asc(expenses.serverCreatedAt))
                 .limit(limit)
                 .offset(offset);
+        }
+        catch (error: any) {
+            throw RepoError.create({
+                error,
+                context: { budgetId, limit, offset },
+                message: "get expenses failed"
+            });
+        }
     }
 
     /* ================= Update ================= */
@@ -53,36 +81,62 @@ export class ExpenseRepoImpl implements ExpenseRepo {
         expectedVersion: number,
         newLastModified: number
     ): Promise<Expense> {
+        try {
+            const [row] = await this.db
+                .update(expenses)
+                .set({
+                    ...updates,
+                    version: sql`version + 1`,
+                    offlineLastModified: newLastModified,
+                })
+                .where(eq(expenses.id, id))
+                .returning();
+            
+            if (!row) {
+                throw new RecordNotFound({ id },"expense not found, update expense failed");
+            }
+            if (row.version !== expectedVersion+1) {
+                throw new VersionMismatchError(
+                    { id, expectedVersion, actualVersion: row.version-1 },
+                    "version mismatch, update expense failed"
+                )
+            }
 
-        const [row] = await this.db
-            .update(expenses)
-            .set({
-                ...updates,
-                version: sql`version + 1`,
-                offlineLastModified: newLastModified,
-            })
-            .where(eq(expenses.id, id))
-            .returning();
-        
-        if (row && row.version !== expectedVersion+1) {
-            throw new RepoError("VERSION_MISMATCH");
+            return row;
         }
-
-        return row;
+        catch (error: any) {
+            throw RepoError.create({
+                error,
+                context: { id },
+                message: "update expense failed"
+            });
+        }
     }
 
     /* ================= Delete ================= */
 
     async deleteExpense(id: string, expectedVersion: number): Promise<boolean> {
-        const [deletedExpense] = await this.db
-            .delete(expenses)
-            .where(eq(expenses.id, id))
-            .returning();
+        try {
+            const [row] = await this.db
+                .delete(expenses)
+                .where(eq(expenses.id, id))
+                .returning({ version: expenses.version });
 
-        if (deletedExpense && deletedExpense.version !== expectedVersion) {
-            throw new RepoError("VERSION_MISMATCH");
+            if (row && row.version !== expectedVersion) {
+                throw new VersionMismatchError(
+                    { id, expectedVersion, actualVersion: row.version },
+                    "version mismatch, delete expense failed"
+                )
+            }
+
+            return true;
         }
-
-        return typeof deletedExpense !== undefined;
+        catch (error: any) {
+            throw RepoError.create({
+                error,
+                context: { id },
+                message: "delete expense failed"
+            });
+        }
     }
 }

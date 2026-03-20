@@ -1,5 +1,5 @@
 {
-  "id": "4eb7c1a9-073a-49ea-a00c-2ecc15cfd6d2",
+  "id": "1f160daa-4b46-4a58-8c8d-33f55696e307",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -90,7 +90,7 @@
         },
         "budget_id": {
           "name": "budget_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -136,7 +136,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "categories_budget_id_budgets_id_fk": {
+          "name": "categories_budget_id_budgets_id_fk",
+          "tableFrom": "categories",
+          "tableTo": "budgets",
+          "columnsFrom": [
+            "budget_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -228,17 +242,17 @@
         }
       },
       "indexes": {
-        "idx_accepted_events_budgetId_userId": {
-          "name": "idx_accepted_events_budgetId_userId",
+        "idx_accepted_events_userId_budgetId_": {
+          "name": "idx_accepted_events_userId_budgetId_",
           "columns": [
             {
-              "expression": "budget_id",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "user_id",
+              "expression": "budget_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -339,7 +353,34 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "expenses_budget_id_budgets_id_fk": {
+          "name": "expenses_budget_id_budgets_id_fk",
+          "tableFrom": "expenses",
+          "tableTo": "budgets",
+          "columnsFrom": [
+            "budget_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "expenses_category_id_categories_id_fk": {
+          "name": "expenses_category_id_categories_id_fk",
+          "tableFrom": "expenses",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -370,7 +411,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "participants_budget_id_budgets_id_fk": {
+          "name": "participants_budget_id_budgets_id_fk",
+          "tableFrom": "participants",
+          "tableTo": "budgets",
+          "columnsFrom": [
+            "budget_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {
         "pk_participants": {
           "name": "pk_participants",
@@ -399,7 +454,7 @@
           "name": "first_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "last_name": {
           "name": "last_name",
@@ -411,16 +466,16 @@
           "name": "email",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "thumbnail_url": {
-          "name": "thumbnail_url",
+        "photo": {
+          "name": "photo",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "original_url": {
-          "name": "original_url",
+        "photo_key": {
+          "name": "photo_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false

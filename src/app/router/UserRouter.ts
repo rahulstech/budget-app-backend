@@ -1,55 +1,43 @@
 import { Request, Response, Router } from "express";
 import { asyncHandler } from "../Helper.js";
 import { validateBody, validateQuery } from "../middleware/Validators.js";
-import { ConfirmPhotoUploadUrlBodySchema, CreateUserBodySchema, GetPhotoUploadUrlQuerySchema, UpdateUserBodySchema } from "../middleware/UserValidationSchemas.js";
-import { handleConfirmPhotoUploadUrl, handleDeleteUser, handleGetPhotoUploadUrl, handleGetUser, handleGetUserPublicInfo
-    , handlePostUser, handlePutUser } from "../controller/UserController.js";
+import { ConfirmPhotoUploadBodySchema, GetPhotoUploadUrlQuerySchema, UpdateUserBodySchema } from "../middleware/UserValidationSchemas.js";
+import { handleConfirmPhotoUploadUrl, handleDeleteProfilePhoto, handleDeleteUser, handleGetPhotoUploadUrl, handleGetUser, handleGetUserPublicInfo
+    , handlePutUser } from "../controller/UserController.js";
 
 export const userRouter = Router();
 
-userRouter.post("/user", 
-    validateBody(CreateUserBodySchema),
-    asyncHandler(async (req: Request, res: Response)=> {
-        const userId = req.userId;
-        const body = req.validatedBody!;
-        const userService = req.userService;
 
-        const response = await handlePostUser(userService, { userId, ...body });
-
-        res.status(201).json(response);
-    }));
-
-userRouter.put("/user",
-    validateBody(UpdateUserBodySchema),
-    asyncHandler(async (req: Request, res: Response)=> {
+userRouter.route("/user")
+    .put(
+        validateBody(UpdateUserBodySchema),
+        asyncHandler(async (req: Request, res: Response)=> {
         const userId = req.userId;
         const body = req.validatedBody!;
         const service = req.userService;
 
-        await handlePutUser(service, { userId, ...body });
+        const response = await handlePutUser(service, { userId, ...body });
 
-        res.sendStatus(200);
+        res.status(200).json(response);
     }))
+    .delete(
+        asyncHandler(async (req: Request, res: Response)=> {
+            const userId = req.userId;
+            const service = req.userService;
 
-userRouter.delete("/user", 
-    asyncHandler(async (req: Request, res: Response)=> {
-        const userId = req.userId;
-        const service = req.userService;
+            await handleDeleteUser(service, { userId });
 
-        await handleDeleteUser(service, { userId });
+            res.sendStatus(200);
+        }))
+    .get(
+        asyncHandler(async (req: Request, res: Response)=> {
+            const userId = req.userId;
+            const userService = req.userService;
 
-        res.sendStatus(200);
-    }))
+            const response = await handleGetUser(userService, { userId });
 
-
-userRouter.get("/user",asyncHandler(async (req: Request, res: Response)=> {
-    const { userId } = req.params;
-    const userService = req.userService;
-
-    const response = await handleGetUser(userService, { userId });
-
-    res.json(response);
-}))
+            res.json(response);
+        }))
 
 userRouter.get("/user/photo-upload-url",
     validateQuery(GetPhotoUploadUrlQuerySchema),
@@ -64,7 +52,7 @@ userRouter.get("/user/photo-upload-url",
 )
 
 userRouter.put("/user/photo-upload-confirm",
-    validateQuery(ConfirmPhotoUploadUrlBodySchema),
+    validateBody(ConfirmPhotoUploadBodySchema),
     asyncHandler(async (req: Request, res: Response) => {
         const body = req.validatedBody!!;
         const userId = req.userId;
@@ -73,6 +61,18 @@ userRouter.put("/user/photo-upload-confirm",
         const response = await handleConfirmPhotoUploadUrl(userService, { userId, ...body });
 
         res.status(201).json(response)
+    })
+)
+
+
+userRouter.delete("/user/profile-photo",
+    asyncHandler(async (req: Request, res: Response) => {
+        const userId = req.userId;
+        const userService = req.userService;
+
+        await handleDeleteProfilePhoto(userService, { userId });
+
+        res.sendStatus(204)
     })
 )
 

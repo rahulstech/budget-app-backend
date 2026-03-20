@@ -1,4 +1,4 @@
-import { BudgetService } from "../../service/BudgetService.js";
+import { BudgetService } from "../../service/budget/BudgetService.js";
 import { CreateBudgetDto } from "../../service/Dtos.js";
 import { ControllerParams, ResponseModel } from "../Types.js";
 

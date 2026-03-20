@@ -1,8 +1,8 @@
 import { Environment } from "../core/Environment.js";
 import { RepoClientImpl } from "../data/impl/RepoClientImpl.js";
-import { BudgetService } from "../service/BudgetService.js";
-import { StorageService } from "../service/StorageService.js";
-import { UserService } from "../service/UserService.js";
+import { BudgetService } from "../service/budget/BudgetService.js";
+import { StorageService } from "../service/storage/StorageService.js";
+import { UserService } from "../service/user/UserService.js";
 
 const {
     DB_USER,

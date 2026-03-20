@@ -6,7 +6,7 @@ const SERVER_PORT = 3000;
 
 const app = createApp(budgetService, userService);
 
-app.listen(SERVER_PORT, (error?: Error)=> {
+const server = app.listen(SERVER_PORT, (error?: Error)=> {
     if (error) {
         logError(`server closed with error `, error);
     }

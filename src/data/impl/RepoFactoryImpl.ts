@@ -17,62 +17,33 @@ import { UserRepoImpl } from "./UserRepoImpl.js";
 
 export class RepoFactoryImpl implements RepoFactory {
 
-    private budgetRepo?: BudgetRepo;
-    private participantRepo?: ParticipantRepo;
-    private categoryRepo?: CategoryRepo;
-    private expenseRepo?: ExpenseRepo;
-    private eventRepo?: EventRepo;
-    private lookupRepo?: LookupRepo;
-    private userRepo?: UserRepo;
-
     constructor(private readonly db: Database) {}
 
     createBudgetRepo(): BudgetRepo {
-        if (!this.budgetRepo) {
-            this.budgetRepo = new BudgetRepoImpl(this.db);
-        }
-        return this.budgetRepo;
+        return new BudgetRepoImpl(this.db);
     }
 
     createParticipantRepo(): ParticipantRepo {
-        if (!this.participantRepo) {
-            this.participantRepo = new ParticipantRepoImpl(this.db);
-        }
-        return this.participantRepo;
+        return new ParticipantRepoImpl(this.db);
     }
 
     createCategoryRepo(): CategoryRepo {
-        if (!this.categoryRepo) {
-            this.categoryRepo = new CategoryRepoImpl(this.db);
-        }
-        return this.categoryRepo;
+        return  new CategoryRepoImpl(this.db);
     }
 
     createExpenseRepo(): ExpenseRepo {
-        if (!this.expenseRepo) {
-            this.expenseRepo = new ExpenseRepoImpl(this.db);
-        } 
-        return this.expenseRepo;
+        return  new ExpenseRepoImpl(this.db);
     }
 
     createEventRepo(): EventRepo {
-        if (!this.eventRepo) {
-            this.eventRepo = new EventRepoImpl(this.db);
-        }
-        return this.eventRepo;
+        return new EventRepoImpl(this.db);
     }
 
     createLookupRepo(): LookupRepo {
-        if (!this.lookupRepo) {
-            this.lookupRepo = new LookupRepoImpl(this.db);
-        }
-        return this.lookupRepo;
+        return new LookupRepoImpl(this.db);
     }
 
     createUserRepo(): UserRepo {
-        if (!this.userRepo) {
-            this.userRepo = new UserRepoImpl(this.db);
-        }
-        return this.userRepo;
+        return new UserRepoImpl(this.db);
     }
 }

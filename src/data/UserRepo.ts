@@ -1,14 +1,18 @@
-import { ParticipantUser, UpdateUserModel, User, UserPublicInfo } from "./Models.js";
+import { User, UserPublicInfo } from "./Models.js";
 
 export interface UserRepo {
 
-    insertUser(user: User): Promise<User>
-
-    updateUser(id: string, updats: UpdateUserModel): Promise<User | null>
+    upsertUser(user: User): Promise<User | null>
 
     deleteUser(id: string): Promise<void>
 
     getUser(id: string): Promise<User | null>
+
+    getPhotoKey(id: string): Promise<string | null>
+
+    setPhoto(id: string, photo: string, photoKey: string): Promise<string>
+
+    removePhoto(id: string): Promise<void>
 
     getUserPublicInfo(id: string): Promise<UserPublicInfo | null>
 

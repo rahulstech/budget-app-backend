@@ -1,6 +1,6 @@
 {
-  "id": "cda9c947-8ba2-4308-8163-642998900dc6",
-  "prevId": "4eb7c1a9-073a-49ea-a00c-2ecc15cfd6d2",
+  "id": "a109ab14-b6a9-42c8-be76-a47ebc1a2850",
+  "prevId": "1f160daa-4b46-4a58-8c8d-33f55696e307",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -90,7 +90,7 @@
         },
         "budget_id": {
           "name": "budget_id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -136,7 +136,21 @@
           "concurrently": false
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "categories_budget_id_budgets_id_fk": {
+          "name": "categories_budget_id_budgets_id_fk",
+          "tableFrom": "categories",
+          "columnsFrom": [
+            "budget_id"
+          ],
+          "tableTo": "budgets",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -228,17 +242,17 @@
         }
       },
       "indexes": {
-        "idx_accepted_events_budgetId_userId": {
-          "name": "idx_accepted_events_budgetId_userId",
+        "idx_accepted_events_userId_budgetId_": {
+          "name": "idx_accepted_events_userId_budgetId_",
           "columns": [
             {
-              "expression": "budget_id",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "user_id",
+              "expression": "budget_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -339,7 +353,34 @@
           "concurrently": false
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "expenses_budget_id_budgets_id_fk": {
+          "name": "expenses_budget_id_budgets_id_fk",
+          "tableFrom": "expenses",
+          "columnsFrom": [
+            "budget_id"
+          ],
+          "tableTo": "budgets",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "expenses_category_id_categories_id_fk": {
+          "name": "expenses_category_id_categories_id_fk",
+          "tableFrom": "expenses",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "tableTo": "categories",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -370,7 +411,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "participants_budget_id_budgets_id_fk": {
+          "name": "participants_budget_id_budgets_id_fk",
+          "tableFrom": "participants",
+          "columnsFrom": [
+            "budget_id"
+          ],
+          "tableTo": "budgets",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
       "compositePrimaryKeys": {
         "pk_participants": {
           "name": "pk_participants",
@@ -399,7 +454,7 @@
           "name": "first_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "last_name": {
           "name": "last_name",
@@ -411,16 +466,16 @@
           "name": "email",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "thumbnail_url": {
-          "name": "thumbnail_url",
+        "photo": {
+          "name": "photo",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "original_url": {
-          "name": "original_url",
+        "photo_key": {
+          "name": "photo_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false

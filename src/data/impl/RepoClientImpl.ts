@@ -4,8 +4,8 @@ import { RepoFactoryImpl } from "./RepoFactoryImpl.js";
 import { RepoClient } from "../RepoClient.js";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { AppError } from "../../core/AppError.js";
 import { onShutdown } from "../../core/Shutdown.js";
+import { RepoError } from "../RepoError.js";
 
 export type Config = {
     DB_USER: string,
@@ -24,8 +24,6 @@ export class RepoClientImpl implements RepoClient {
 
     private db?: Database;
 
-    private factory?: RepoFactory;
-
     constructor(config: Config) {
         const { 
             DB_USER,
@@ -37,8 +35,6 @@ export class RepoClientImpl implements RepoClient {
             DB_USE_SSL,
             DB_SSL_CA,
         } = config;
-
-
 
         this.pool = new Pool({
             max: DB_MAX_CONNECTION,
@@ -57,11 +53,22 @@ export class RepoClientImpl implements RepoClient {
     }
 
     connect(): void {
+        try {
         this.db = drizzle(this.pool);
+        }
+        catch(error: any) {
+            throw RepoError.create({
+                error,
+                message: "RepoClient connect failed"
+            })
+        }
     }
 
     async disconnect(): Promise<void> {
-        await this.pool.end();
+        try {
+            await this.pool.end();
+        }
+        catch(error) {}
     }
 
     runInTransaction<T>(action: (factory: RepoFactory) => Promise<T>): Promise<T> {
@@ -74,18 +81,15 @@ export class RepoClientImpl implements RepoClient {
 
     getRepoFactory(): RepoFactory {
         this.checkConnectedOrThrow();
-        if (!this.factory) {
-            this.factory = new RepoFactoryImpl(this.db!);
-        }
-        return this.factory!;
+        return new RepoFactoryImpl(this.db!);
     }
 
     private checkConnectedOrThrow(): void {
         if (!this.db) {
-            throw new AppError("call connect() first.", true);
+            throw new RepoError("call connect() first", null, null);
         }
         else if (this.pool.ended) {
-            throw new AppError("connection is already closed.", true);
+            throw new RepoError("connection is already closed.", null, null);
         }
     }
 }

@@ -22,6 +22,7 @@ async function main() {
             lastName: "Sharma",
             email: "amit.sharma@email.com",
             photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo1.jpg",
+            photoKey: "public/user-photos/photo1.jpg",
             lastModified: Date.now()
         },
         {
@@ -30,6 +31,7 @@ async function main() {
             lastName: "Verma",
             email: "neha.verma@email.com",
             photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo2.jpg",
+            photoKey: "public/user-photos/photo2.jpg",
             lastModified: Date.now()
         },
         {
@@ -38,6 +40,7 @@ async function main() {
             lastName: "Sen",
             email: "priya.sen@email.com",
             photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo3.jpg",
+            photoKey: "public/user-photos/photo3.jpg",
             lastModified: Date.now()
         },
         {
@@ -46,6 +49,7 @@ async function main() {
             lastName: "Mehta",
             email: "arjun.mehta.verma@email.com",
             photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo4.jpg",
+               photoKey: "public/user-photos/photo4.jpg",
             lastModified: Date.now()
         },
         {
@@ -54,6 +58,7 @@ async function main() {
             lastName: "Rathor",
             email: "pranab.rathor@email.com",
             photo: "https://dnjlzdll1pbqd.cloudfront.net/user-photos/photo5.jpg",
+            photoKey: "public/user-photos/photo5.jpg",
             lastModified: Date.now()
         }
     ]

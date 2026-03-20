@@ -1,11 +1,7 @@
 import z from "zod";
 
-export const CreateUserBodySchema = z.object({
-    firstName: z.string(),
-    lastName: z.string().optional()
-});
-
 export const UpdateUserBodySchema = z.object({
+    email: z.email().optional(),
     firstName: z.string().optional(),
     lastName: z.string().optional()
 });
@@ -15,6 +11,6 @@ export const GetPhotoUploadUrlQuerySchema = z.object({
     size: z.coerce.number().positive()
 })
 
-export const ConfirmPhotoUploadUrlBodySchema = z.object({
+export const ConfirmPhotoUploadBodySchema = z.object({
     key: z.string(),
 })

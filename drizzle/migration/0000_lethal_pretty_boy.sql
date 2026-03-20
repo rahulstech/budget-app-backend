@@ -13,7 +13,7 @@ CREATE TABLE "categories" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"allocate" numeric(12, 2) NOT NULL,
-	"budget_id" text NOT NULL,
+	"budget_id" uuid NOT NULL,
 	"server_created_at" bigint NOT NULL,
 	"offline_last_modified" bigint NOT NULL,
 	"version" integer NOT NULL,
@@ -59,14 +59,18 @@ CREATE TABLE "participants" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
-	"first_name" text NOT NULL,
+	"first_name" text,
 	"last_name" text,
-	"email" text NOT NULL,
-	"thumbnail_url" text,
-	"original_url" text,
+	"email" text,
+	"photo" text,
+	"photo_key" text,
 	"last_modified" bigint NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "categories" ADD CONSTRAINT "categories_budget_id_budgets_id_fk" FOREIGN KEY ("budget_id") REFERENCES "public"."budgets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "expenses" ADD CONSTRAINT "expenses_budget_id_budgets_id_fk" FOREIGN KEY ("budget_id") REFERENCES "public"."budgets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "expenses" ADD CONSTRAINT "expenses_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "participants" ADD CONSTRAINT "participants_budget_id_budgets_id_fk" FOREIGN KEY ("budget_id") REFERENCES "public"."budgets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_categories_budgetId" ON "categories" USING btree ("budget_id");--> statement-breakpoint
-CREATE INDEX "idx_accepted_events_budgetId_userId" ON "accepted_events" USING btree ("budget_id","user_id");--> statement-breakpoint
+CREATE INDEX "idx_accepted_events_userId_budgetId_" ON "accepted_events" USING btree ("user_id","budget_id");--> statement-breakpoint
 CREATE INDEX "idx_expenses_budgetId" ON "expenses" USING btree ("budget_id");

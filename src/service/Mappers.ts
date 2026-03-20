@@ -1,4 +1,4 @@
-import { Budget, Category, Expense, Participant, Event } from "../data/Models.js";
+import { Budget, Category, Expense, Participant, Event, ParticipantUser, UserPublicInfo } from "../data/Models.js";
 import { CreateBudgetDto, AddCategoryDto, AddExpenseDto, EventDto, EditExpenseDto, 
     DeleteExpenseDto, EditCategoryDto, EditBudgetDto, DeleteCategoryDto, DeleteBudgetDto,
      AddParticipantDto, RemoveParticipantDto, 
@@ -244,6 +244,48 @@ export class EventBuilder {
             ...this.base(generateUUID(),budgetId,actorUserId),
             type: EventType.REMOVE_PARTICIPANT,
             recordId: userId,
+        };
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const ParticipantMappers = {
+
+    toParticipant(budget: Budget): Participant {
+        const { id, createdBy, offlineLastModified } = budget;
+        return { 
+            budgetId: id,
+            userId: createdBy,
+            joinedAt: offlineLastModified,
+        }
+    }
+}
+
+export const ParticipantUserMapper = {
+    
+    toParticipantUser(createBudgetEvent: Event, userInfo: UserPublicInfo | null): ParticipantUser {
+        const { budgetId, userId, when } = createBudgetEvent;
+        return {
+            budgetId,
+            userId,
+            joinedAt: when,
+            userExists: userInfo != null,
+            firstName: userInfo?.firstName ?? null,
+            lastName: userInfo?.lastName ?? null,
+            photo: userInfo?.photo ?? null
         };
     }
 }

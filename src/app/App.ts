@@ -1,11 +1,11 @@
 import { budgetRouter } from "./router/BudgetRouter.js";
-import { BudgetService } from "../service/BudgetService.js";
+import { BudgetService } from "../service/budget/BudgetService.js";
 import express, { Express, Request, Response, NextFunction } from "express";
 import { HttpError } from "../core/HttpError.js";
 import { httpLogger } from "./middleware/LoggerMiddleware.js";
 import { checkApiKey, extractUserId } from "./middleware/SecurityMiddleware.js";
 import { noauthUserRoutes, userRouter } from "./router/UserRouter.js";
-import { UserService } from "../service/UserService.js";
+import { UserService } from "../service/user/UserService.js";
 import { eventRouter } from "./router/EventRouter.js";
 import { AppError } from "../core/AppError.js";
 
@@ -19,18 +19,20 @@ export function createApp(budgetService: BudgetService, userService: UserService
 
     app.use(httpLogger());
 
-
-
     app.use((req: Request, _res: Response, next: NextFunction)=> {
         req.budgetService = budgetService;
         req.userService = userService;
         next();
     });
 
+
+
     /**
      * no auth app routes
      */
     app.use(noauthUserRoutes);
+
+    app.use(extractUserId());
 
     /**
      * authorized app routes
@@ -52,6 +54,8 @@ export function createApp(budgetService: BudgetService, userService: UserService
      * Router Error handler
      */
     app.use((err: Error, req: Request, res: Response, _next: NextFunction)=> {
+        console.log(err);
+
         if (err instanceof HttpError) {
             res.status(err.statusCode)
             .json({ 

@@ -9,18 +9,12 @@ export class HttpError extends AppError {
 
     readonly issues?: HttpError.ErrorItem[]
 
-    constructor(readonly statusCode: number, issue?: string | HttpError.ErrorItem[]) {
+    constructor(readonly statusCode: number, message?: string, cause?: any, shouldShutdown: boolean = false) {
         super(
-            typeof issue === "string" ? issue : getHttpStatusMessage(statusCode), 
-            false
+            message ?? getHttpStatusMessage(statusCode), 
+            shouldShutdown,
+            cause
         );
-        this.statusCode = statusCode;
-        if (typeof issue === "string") {
-            this.issues = [issue];
-        }
-        else {
-            this.issues = issue;
-        }
     }
 
     flatten(): string[] {
@@ -38,36 +32,36 @@ export namespace HttpError {
 
     export class BadRequest extends HttpError {
 
-        constructor(issue?: string | HttpError.ErrorItem[]) {
-            super(400, issue);
+        constructor(message?: string) {
+            super(400, message);
         }
     }
 
     export class Forbidden extends HttpError {
 
-        constructor(issue?: string | HttpError.ErrorItem[]) {
-            super(403, issue);
+        constructor(message?: string) {
+            super(403, message);
         }
     }
 
     export class NotFound extends HttpError {
 
-        constructor(issue?: string | HttpError.ErrorItem[]) {
-            super(404, issue);
+        constructor(message?: string) {
+            super(404, message);
         }
     }
 
     export class Conflict extends HttpError {
 
-        constructor(issue?: string | HttpError.ErrorItem[]) {
-            super(409, issue);
+        constructor(message?: string) {
+            super(409, message);
         }
     }
 
     export class ServerError extends HttpError {
 
-        constructor(issue?: string | HttpError.ErrorItem[]) {
-            super(500, issue);
+        constructor(message: string|null = null, cause?: any, shouldShutdown: boolean = false) {
+            super(500, message ?? getHttpStatusMessage(500), cause, shouldShutdown);
         }
     }
 }
