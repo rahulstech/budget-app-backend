@@ -304,7 +304,7 @@ function normalizeFailure(body: any, err: any): ResponseModel {
   else {
     error = {
       statusCode: 500,
-      message: err.message ?? "INTERNAL_SERVER_ERROR"
+      message: "INTERNAL_SERVER_ERROR"
     };
   }
   return {

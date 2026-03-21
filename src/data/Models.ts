@@ -7,6 +7,8 @@ export type Database = NodePgDatabase | PgTransaction<any,any,any>;
 
 export type User = typeof users.$inferSelect;
 
+export type UpsertUserModel = Pick<User,"id"|"lastModified"> & Partial<Omit<User,"id"|"lastModified">>;
+
 export type UserPublicInfo = Pick<User,"id"|"firstName"|"lastName"|"photo">;
 
 export type Budget = typeof budgets.$inferSelect;

@@ -1,8 +1,8 @@
-import { User, UserPublicInfo } from "./Models.js";
+import { UpsertUserModel, User, UserPublicInfo } from "./Models.js";
 
 export interface UserRepo {
 
-    upsertUser(user: User): Promise<User | null>
+    upsertUser(user: UpsertUserModel): Promise<User | null>
 
     deleteUser(id: string): Promise<void>
 

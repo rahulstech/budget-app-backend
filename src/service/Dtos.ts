@@ -140,8 +140,8 @@ export type EventDto = {
 // UserDto
 export type UserDto = {
     id: string,
-    firstName: string,
+    firstName: string | null,
     lastName: string | null,
-    email: string,
+    email: string | null,
     photo: string | null
 }

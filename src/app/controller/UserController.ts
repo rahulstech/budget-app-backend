@@ -15,8 +15,6 @@ export async function handleGetUser(service: UserService, params: ControllerPara
     const { userId } = params;
     const user = await service.getUser(userId);
 
-    console.log(`get user for id ${userId}`);
-
     return user;
 }
 

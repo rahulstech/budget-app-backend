@@ -113,7 +113,7 @@ export function toUserDto(user: any): UserDto {
     return {
         id,
         firstName,
-        lastName: lastName ?? undefined,
+        lastName,
         email,
         photo,
     };

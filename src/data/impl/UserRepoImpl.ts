@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { Database, User, UserPublicInfo } from "../Models.js";
+import { Database, UpsertUserModel, User, UserPublicInfo } from "../Models.js";
 import { users } from "../schema/Tables.js";
 import { UserRepo } from "../UserRepo.js";
 import { RecordNotFound, RepoError } from "../RepoError.js";
@@ -8,18 +8,25 @@ export class UserRepoImpl implements UserRepo {
 
     constructor(private readonly db: Database) {}
 
-    async upsertUser(user: User): Promise<User | null> {
+    async upsertUser(data: UpsertUserModel): Promise<User | null> {
         try {
             const [newRow] = await this.db.insert(users)
-                    .values(user)
+                    .values({
+                        id: data.id,
+                        email: data.email ?? null,
+                        firstName: data.firstName ?? null,
+                        lastName: data.lastName ?? null,
+                        photo: data.photo ?? null,
+                        photoKey: data.photoKey ?? null,
+                        lastModified: Date.now()
+                    })
                     .returning()
                     .onConflictDoUpdate({
                         target: [users.id],
                         set: {
-                            email: user.email,
-                            firstName: user.firstName,
-                            lastName: user.lastName,
-                        }
+                            ...data,
+                            id: undefined
+                        },
                     });
 
             return newRow; 
@@ -27,7 +34,7 @@ export class UserRepoImpl implements UserRepo {
         catch (error: any) {
             throw RepoError.create({
                 error,
-                context: { id: user.id },
+                context: { id: data.id },
                 message: "upsert user failed"
             });
         }

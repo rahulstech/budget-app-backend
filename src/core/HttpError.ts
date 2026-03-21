@@ -46,8 +46,8 @@ export namespace HttpError {
 
     export class NotFound extends HttpError {
 
-        constructor(message?: string) {
-            super(404, message);
+        constructor(message?: string, context?: Record<string,any>) {
+            super(404, message,context);
         }
     }
 

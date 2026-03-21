@@ -1,7 +1,7 @@
 import { AppError } from "../../core/AppError.js";
 import { generateUUID } from "../../core/Helpers.js";
 import { HttpError } from "../../core/HttpError.js";
-import { User, UserPublicInfo } from "../../data/Models.js";
+import { UpsertUserModel, User, UserPublicInfo } from "../../data/Models.js";
 import { RepoClient } from "../../data/RepoClient.js";
 import { RepoError } from "../../data/RepoError.js";
 import { UserRepo } from "../../data/UserRepo.js";
@@ -38,9 +38,9 @@ export class UserService {
         return this.client.getRepoFactory().createUserRepo();
     }
 
-    async updateUser(id: string, data: Omit<User, "id"|"lastModified">): Promise<UserDto> {
+    async updateUser(id: string, data: Partial<Omit<User, "id"|"lastModified">>): Promise<UserDto> {
         try {
-            const user: User = {
+            const user: UpsertUserModel = {
                 id,
                 ...data,
                 lastModified: Date.now()
@@ -57,14 +57,33 @@ export class UserService {
         await this.getUserRepo().deleteUser(id);
     }
 
-    async getUser(id: string): Promise<User|null> {
-        const userRepo = this.getUserRepo();
-        return userRepo.getUser(id);
+    async getUser(id: string): Promise<UserDto> {
+        try {
+            const userRepo = this.getUserRepo();
+            const user = await userRepo.getUser(id);
+            if (null === user) {
+                throw new HttpError.NotFound("USER_NOT_FOUND", { id });
+            }
+
+            return toUserDto(user);
+        }
+        catch(err: any) {
+            throw this.mapError(err);
+        }
     }
 
     async getUserPublicInfo(id: string): Promise<UserPublicInfo|null> {
-        const userRepo = this.getUserRepo();
-        return userRepo.getUserPublicInfo(id);
+        try {
+            const userRepo = this.getUserRepo();
+            const userInfo = await userRepo.getUserPublicInfo(id);
+            if (null === userInfo) {
+                throw new HttpError.NotFound("USER_NOT_FOUND", {id});
+            }
+            return userInfo;
+        }
+        catch(err: any) {
+            throw this.mapError(err);
+        }
     }
 
     async getPhotoUploadUrl(contentType: string, contentLength: number): Promise<UploadUrlResult> {
@@ -172,6 +191,9 @@ export class UserService {
     private mapError(err: any): AppError {
         if (err instanceof StorageError) {
             return err.toHttpError();
+        }
+        if (err instanceof HttpError) {
+            return err;
         }
         return new HttpError.ServerError(null,err);
     }
