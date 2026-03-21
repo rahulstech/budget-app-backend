@@ -28,6 +28,8 @@ declare global {
 
             validatedBody?: unknown,
 
+            validatedParams?: Record<string,unknown>,
+
             logger: Logger,
         }
     }

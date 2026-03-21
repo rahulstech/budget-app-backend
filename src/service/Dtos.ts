@@ -1,7 +1,7 @@
 // Budget DTOs
 
-import { EventType, Nullable } from "../core/Types.js"
-import { Participant, ParticipantUser, UserPublicInfo } from "../data/Models.js"
+import { EventType } from "../core/Types.js"
+import { Budget, Category, Expense, ParticipantUser } from "../data/Models.js"
 
 export type CreateBudgetDto = {
     eventId: string,
@@ -30,16 +30,7 @@ export type DeleteBudgetDto = {
     when: number,
 }
 
-export type BudgetDto = {
-    eventId?: string,
-    id: string,
-    createdBy?: string,
-    title?: string,
-    details?: string | null,
-    version: number,
-    offlineLastModified?: number,
-    participant?: ParticipantDto,
-}
+export type BudgetDto = Omit<Budget,"serverCreatedAt"|"isDeleted">;
 
 // Category DTOs
 
@@ -73,15 +64,7 @@ export type DeleteCategoryDto = {
     when: number,
 }
 
-export type CategoryDto = {
-    id: string,
-    budgetId: string,
-    createdBy: string,
-    name: string,
-    allocate: string,
-    version: number,
-    offlineLastModified: number,
-}
+export type CategoryDto = Omit<Category,"serverCreatedAt">;
 
 // expense DTOs
 
@@ -119,17 +102,7 @@ export type DeleteExpenseDto = {
     when: number,
 }
 
-export type ExpenseDto = {
-    id: string,
-    budgetId: string,
-    categoryId: string,
-    createdBy: string,
-    date: string,
-    amount: string,
-    note: string | null,
-    version: number,
-    offlineLastModified: number,
-}
+export type ExpenseDto = Omit<Expense,"serverCreatedAt">;
 
 // Participant DTOs
 

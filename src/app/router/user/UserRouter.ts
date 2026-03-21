@@ -1,9 +1,10 @@
 import { Request, Response, Router } from "express";
-import { asyncHandler } from "../Helper.js";
-import { validateBody, validateQuery } from "../middleware/Validators.js";
-import { ConfirmPhotoUploadBodySchema, GetPhotoUploadUrlQuerySchema, UpdateUserBodySchema } from "../middleware/UserValidationSchemas.js";
-import { handleConfirmPhotoUploadUrl, handleDeleteProfilePhoto, handleDeleteUser, handleGetPhotoUploadUrl, handleGetUser, handleGetUserPublicInfo
-    , handlePutUser } from "../controller/UserController.js";
+import { asyncHandler } from "../../Helper.js";
+import { validateBody, validateQuery } from "../../middleware/Validators.js";
+import { ConfirmPhotoUploadBodySchema, GetPhotoUploadUrlQuerySchema, UpdateUserBodySchema } from "./UserValidationSchemas.js";
+import { handleConfirmPhotoUploadUrl, handleDeleteProfilePhoto, handleDeleteUser, 
+    handleGetPhotoUploadUrl, handleGetUser, handleGetUserPublicInfo, handlePutUser 
+} from "../../controller/UserController.js";
 
 export const userRouter = Router();
 

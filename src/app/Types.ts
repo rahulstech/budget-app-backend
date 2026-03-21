@@ -1,6 +1,5 @@
 import z from "zod";
-import { PostBudgetBodySchema } from "./middleware/BudgetValidationSchemas.js";
-import { EventSchema, PostEventsBodySchema } from "./middleware/EventValidationSchemas.js";
+import { PostBudgetBodySchema } from "./router/budget/BudgetValidationSchemas.js";
 import { HttpResponseError } from "../core/Types.js";
 
 export type ResponseModel = { 
@@ -14,7 +13,3 @@ export type ControllerParams = {
 };
 
 export type PostBudgetBodyModel = z.infer<typeof PostBudgetBodySchema>;
-
-export type PostEventsBodyModel = z.infer<typeof PostEventsBodySchema>;
-
-export type EventBodyModel = z.infer<typeof EventSchema>;

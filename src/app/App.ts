@@ -1,12 +1,12 @@
-import { budgetRouter } from "./router/BudgetRouter.js";
+import { budgetRouter } from "./router/budget/BudgetRouter.js";
 import { BudgetService } from "../service/budget/BudgetService.js";
 import express, { Express, Request, Response, NextFunction } from "express";
 import { HttpError } from "../core/HttpError.js";
 import { httpLogger } from "./middleware/LoggerMiddleware.js";
 import { checkApiKey, extractUserId } from "./middleware/SecurityMiddleware.js";
-import { noauthUserRoutes, userRouter } from "./router/UserRouter.js";
+import { noauthUserRoutes, userRouter } from "./router/user/UserRouter.js";
 import { UserService } from "../service/user/UserService.js";
-import { eventRouter } from "./router/EventRouter.js";
+import { eventRouter } from "./router/event/EventRouter.js";
 import { AppError } from "../core/AppError.js";
 
 

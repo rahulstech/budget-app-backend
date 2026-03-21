@@ -15,6 +15,12 @@ export enum EventType {
   DELETE_EXPENSE = "expense.delete",
 }
 
+export enum EntityType {
+  BUDGET = "budget",
+  CATEGORY = "category",
+  EXPENSE = "expense",
+}
+
 export type PagedResult<K,T> = {
   key: K,
   items: T[],

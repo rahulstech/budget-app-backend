@@ -1,5 +1,5 @@
 import z from "zod";
-import { EventType } from "../../core/Types.js";
+import { EventType } from "../../../core/Types.js";
 
 const NonEmptyString = z.string().nonempty();
 const NonNegativeInt = z.number().int().nonnegative();

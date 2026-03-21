@@ -10,8 +10,13 @@ export function validateBody(schema: ZodSchema<any>): RequestHandler {
       return next(mapZodErrorToHttpError(parsed.error))
     }
 
-    // attach parsed result for downstream handler
-    req.validatedBody = parsed.data;
+    const data = parsed.data ?? {};
+    if (req.validatedBody) {
+      req.validatedBody = { ...req.validatedBody!!, ...data };
+    }
+    else {
+      req.validatedBody = { ...data  };
+    }
     next();
   };
 }
@@ -23,7 +28,33 @@ export function validateQuery(schema: ZodSchema<any>): RequestHandler {
       return next(mapZodErrorToHttpError(parsed.error));
     }
 
-    req.validatedQuery = parsed.data;
+    const data = parsed.data ?? {};
+    if (req.validatedQuery) {
+      req.validatedQuery = { ...req.validatedQuery!!, ...data };
+    }
+    else {
+      req.validatedQuery = { ...data  };
+    }
+    next();
+  }
+}
+
+export function validateParams(schema: ZodSchema<any>): RequestHandler {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const parsed = schema.safeParse(req.params);
+    if (!parsed.success) {
+      return next(mapZodErrorToHttpError(parsed.error));
+    }
+
+    const data = parsed.data ?? {};
+
+    if (req.validatedParams) {
+      req.validatedParams = { ...req.validatedParams!!, ...data };
+    }
+    else {
+      req.validatedParams = { ...data  };
+    }
+
     next();
   }
 }

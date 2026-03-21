@@ -1,8 +1,8 @@
 import { Request, Response, Router } from "express";
-import { asyncHandler } from "../Helper.js";
-import { validateBody, validateQuery } from "../middleware/Validators.js";
-import { handleGetEvents, handlePostEvents } from "../controller/EventsController.js";
-import { GetEventsQuerySchema, PostEventsBodySchema } from "../middleware/EventValidationSchemas.js";
+import { asyncHandler } from "../../Helper.js";
+import { validateBody, validateQuery } from "../../middleware/Validators.js";
+import { handleGetEvents, handlePostEvents } from "../../controller/EventsController.js";
+import { GetEventsQuerySchema, PostEventsBodySchema } from "./EventValidationSchemas.js";
 
 export const eventRouter = Router();
 

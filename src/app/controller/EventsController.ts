@@ -3,14 +3,120 @@ import { mapZodErrorToHttpError } from "../../core/Mappers.js";
 import { EventType, HttpResponseError } from "../../core/Types.js";
 import { BudgetService } from "../../service/budget/BudgetService.js";
 import { EventDto } from "../../service/Dtos.js";
-import { EventSchema } from "../middleware/EventValidationSchemas.js";
-import { ControllerParams, EventBodyModel, ResponseModel } from "../Types.js";
+import { ControllerParams, ResponseModel } from "../Types.js";
+import { z } from "zod";
+
+
+
+const NonEmptyString = z.string().nonempty();
+const NonNegativeInt = z.number().int().nonnegative();
+const EpochMillis = z.number().int().nonnegative();
+// decimal-as-string to preserve precision
+const DecimalString = z.string().regex(/^\d+(\.\d+)?$/);
+
+const EventCommonSchema = z.object({
+    eventId: z.uuid(),
+    event: NonEmptyString,
+    budgetId: z.uuid(),
+    when: EpochMillis,
+})
+
+/**
+ * Individual event schemas
+ */
+const EditBudgetEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.EDIT_BUDGET),
+    title: z.string().optional(),
+    details: z.string().optional(),
+    version: NonNegativeInt,
+});
+
+
+const DeleteBudgetEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.DELETE_BUDGET),
+    version: NonNegativeInt,
+});
+
+const AddCategoryEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.ADD_CATEGORY),
+    recordId: NonEmptyString,
+    name: NonEmptyString,
+    allocate: DecimalString,
+});
+
+const EditCategoryEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.EDIT_CATEGORY),
+    recordId: NonEmptyString,
+    name: z.string().optional(),
+    allocate: DecimalString.optional(),
+    version: NonNegativeInt,
+});
+
+const DeleteCategoryEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.DELETE_CATEGORY),
+    recordId: NonEmptyString,
+    version: NonNegativeInt,
+});
+
+const AddExpenseEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.ADD_EXPENSE),
+    recordId: NonEmptyString,
+    categoryId: NonEmptyString,
+    date: z.iso.date(),
+    amount: DecimalString,
+    note: z.string().optional(),
+});
+
+const EditExpenseEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.EDIT_EXPENSE),
+    recordId: NonEmptyString,
+    date: z.iso.date().optional(),
+    amount: DecimalString.optional(),
+    note: z.string().optional(),
+    version: NonNegativeInt,
+});
+
+const DeleteExpenseEventSchema = EventCommonSchema.extend({
+    event: z.literal(EventType.DELETE_EXPENSE),
+    recordId: NonEmptyString,
+    version: NonNegativeInt,
+});
+
+/**
+ * Discriminated union: a single event
+ */
+const EventSchema = z.discriminatedUnion("event", [
+  EditBudgetEventSchema,
+  DeleteBudgetEventSchema,
+  AddCategoryEventSchema,
+  EditCategoryEventSchema,
+  DeleteCategoryEventSchema,
+  AddExpenseEventSchema,
+  EditExpenseEventSchema,
+  DeleteExpenseEventSchema,
+]);
+
+
+type EventBody = z.infer<typeof EventSchema>;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Append offline evnets
 export async function handlePostEvents(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
 
   const { body, userId } = params;
-  const sortedEvents = (body.events as EventBodyModel[])
+  const sortedEvents = (body.events as EventBody[])
     .sort((a, b) => a.when - b.when);
 
   const results: ResponseModel[] = [];
@@ -59,7 +165,7 @@ async function processSingleEvent(service: BudgetService, rawEvent: any, actorUs
 }
 
 
-function validateSingleEvent(rawEvent: Record<string,any>): EventBodyModel {
+function validateSingleEvent(rawEvent: Record<string,any>): EventBody {
   const parsed = EventSchema.safeParse(rawEvent);
   if (!parsed.success) {
       const err = mapZodErrorToHttpError(parsed.error);
@@ -70,7 +176,7 @@ function validateSingleEvent(rawEvent: Record<string,any>): EventBodyModel {
 }
 
 
-async function dispatchEvent(service: BudgetService, input: EventBodyModel, actorUserId: string): Promise<ResponseModel> {
+async function dispatchEvent(service: BudgetService, input: EventBody, actorUserId: string): Promise<ResponseModel> {
   const { 
     eventId, event, budgetId, recordId, 
     version, // when event successfully applied new version is returned
@@ -89,7 +195,7 @@ async function dispatchEvent(service: BudgetService, input: EventBodyModel, acto
 }
 
 
-async function callServiceForEvent(service: BudgetService, event: EventBodyModel, actorUserId: string): Promise<EventDto> {
+async function callServiceForEvent(service: BudgetService, event: EventBody, actorUserId: string): Promise<EventDto> {
   switch (event.event) {
     case await EventType.EDIT_BUDGET:
       return service.editBudget({

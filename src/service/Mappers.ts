@@ -66,11 +66,16 @@ export function toParticipant(dto: AddParticipantDto): Participant {
 
 // model -> dto
 
-export function toBudgetDto(budget: any, participant?: ParticipantDto): BudgetDto {
-    const { eventId, id, createdBy, title, details, version, offlineLastModified } = budget;
+export function toBudgetDto(budget: any): BudgetDto {
+    const { id, createdBy, title, details, version, offlineLastModified } = budget;
     return {
-       eventId, id, createdBy, title, details, version, offlineLastModified, participant
-    }
+        id, 
+        createdBy,
+        title,
+        details: details ?? null,
+        version, 
+        offlineLastModified
+    };
 }
 
 export function toCategoryDto(category: any): CategoryDto {
