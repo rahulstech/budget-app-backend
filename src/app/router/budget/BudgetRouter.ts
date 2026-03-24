@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
-import { BudgetIdParamsSchema, GetCategorySnapShotParamsSchema, GetExpenseSnapShotParamsSchema, PostBudgetBodySchema } from "./BudgetValidationSchemas.js";
+import { BudgetIdParamsSchema, BudgetsOfParticipantQuerySchema, GetCategorySnapShotParamsSchema, GetExpenseSnapShotParamsSchema, PostBudgetBodySchema } from "./BudgetValidationSchemas.js";
 import { asyncHandler } from "../../Helper.js";
-import { validateBody, validateParams } from "../../middleware/Validators.js";
-import { handleGetSnapShot, handleJoinBudget, handleLeaveBudget, handlePostBudget } from "../../controller/BudgetController.js";
+import { validateBody, validateParams, validateQuery } from "../../middleware/Validators.js";
+import { handleGetBudgetsOfParticipant, handleGetSnapShot, handleJoinBudget, handleLeaveBudget, handlePostBudget } from "../../controller/BudgetController.js";
 import { EntityType } from "../../../core/Types.js";
 
 
@@ -33,6 +33,21 @@ budgetRouter.post(
     res.status(201).json(result);
   }
 ));
+
+
+// get budgets of participants
+budgetRouter.get(
+  "/budgets",
+  validateQuery(BudgetsOfParticipantQuerySchema),
+  asyncHandler(async (req: Request,res: Response) => {
+    const userId = req.userId;
+    const { key, count } = req.validatedQuery!!
+    const service = req.budgetService;
+
+    const response = await handleGetBudgetsOfParticipant(service, { userId, key, count });
+    res.json(response);
+  })
+)
 
 
 const budgetsRouter = Router({ mergeParams: true });
@@ -72,6 +87,7 @@ budgetsRouter.delete(
   }));
 
 
+  
 // get budget snapshot
 budgetsRouter.get(
   buildRoute(),
@@ -120,6 +136,22 @@ budgetsRouter.get(
     const result = await handleGetSnapShot(
                       service, 
                       { userId, entity: EntityType.EXPENSE, budgetId, recordId: expenseId }
+                    );
+    res.json(result);
+  })
+)
+
+// get all participants snapshot
+budgetsRouter.get(
+  buildRoute("participants"), 
+  asyncHandler(async (req: Request, res: Response) => {
+    const { budgetId } = req.validatedParams!!;
+    const userId = req.userId;
+    const service = req.budgetService;
+
+    const result = await handleGetSnapShot(
+                      service, 
+                      { userId, entity: EntityType.PARTICIPANT, budgetId }
                     );
     res.json(result);
   })

@@ -19,3 +19,8 @@ export const GetCategorySnapShotParamsSchema = z.object({
 export const GetExpenseSnapShotParamsSchema = z.object({
   expenseId: z.uuid()
 });
+
+export const BudgetsOfParticipantQuerySchema = z.object({
+  key: z.coerce.number().nonnegative().default(0),
+  count: z.coerce.number().positive().default(100),
+})

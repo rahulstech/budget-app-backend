@@ -32,7 +32,36 @@ export class BudgetRepoImpl implements BudgetRepo {
   async getBudgetById(id: string): Promise<Budget | null> {
     const [budget] = await this.db.select().from(budgets).where(eq(budgets.id,id));
     return budget ?? null;
+  }
 
+  async getBudgetsOfParticipant(
+    userId: string, 
+    limit: number, 
+    offset: number
+  ): Promise<Omit<Budget,"isDeleted"|"serverCreatedAt">[]> {
+    try {
+      const rows = await this.db.select({
+        id: budgets.id,
+        title: budgets.title,
+        details: budgets.details,
+        createdBy: budgets.createdBy,
+        version: budgets.version,
+        offlineLastModified: budgets.offlineLastModified,
+      })
+      .from(participants)
+      .innerJoin(budgets, eq(participants.budgetId, budgets.id))
+      .where(eq(participants.userId, userId))
+      .limit(limit)
+      .offset(offset);
+      return rows;
+    }
+    catch(error: any) {
+      throw RepoError.create({
+        error,
+        message: "fail to get budgets of participants",
+        context: { userId, limit, offset }
+      });
+    }
   }
 
   async updateBudget(id: string, updates: UpdateBudgetModel, expectedVersion: number, lastModified: number): Promise<Budget> {

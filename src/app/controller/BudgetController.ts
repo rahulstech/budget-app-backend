@@ -1,4 +1,6 @@
+import e from "express";
 import { AppError } from "../../core/AppError.js";
+import { HttpError } from "../../core/HttpError.js";
 import { EntityType } from "../../core/Types.js";
 import { BudgetService } from "../../service/budget/BudgetService.js";
 import { CreateBudgetDto } from "../../service/Dtos.js";
@@ -53,7 +55,22 @@ export async function handleGetSnapShot(service: BudgetService, params: Controll
     case EntityType.EXPENSE: {
       return service.getExpense(recordId);
     }
+    case EntityType.PARTICIPANT: {
+      return { participants: await service.getParticipantsOfBudget(budgetId) };
+    }
   }
 
-  throw new AppError(`can not get snaphot of unknow entity ${entity}`);
+  throw new HttpError.ServerError(`can not get snaphot of unknow entity ${entity}`);
+}
+
+
+export async function handleGetBudgetsOfParticipant(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
+  const { userId, key, count } = params;
+  const { nextKey, budgets } = await service.getBudgetsOfParticipant(userId, key, count);
+  return {
+    userId,
+    key,
+    nextKey,
+    budgets,
+  };
 }

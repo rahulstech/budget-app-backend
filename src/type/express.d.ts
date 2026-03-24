@@ -24,9 +24,9 @@ declare global {
 
             userId: string,
 
-            validatedQuery?: unknown,
+            validatedQuery?: Record<string,any>,
 
-            validatedBody?: unknown,
+            validatedBody?: Record<string,any>,
 
             validatedParams?: Record<string,unknown>,
 

@@ -254,19 +254,6 @@ export class EventBuilder {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 export const ParticipantMappers = {
 
     toParticipant(budget: Budget): Participant {
@@ -276,11 +263,8 @@ export const ParticipantMappers = {
             userId: createdBy,
             joinedAt: offlineLastModified,
         }
-    }
-}
+    },
 
-export const ParticipantUserMapper = {
-    
     toParticipantUser(createBudgetEvent: Event, userInfo: UserPublicInfo | null): ParticipantUser {
         const { budgetId, userId, when } = createBudgetEvent;
         return {
@@ -292,5 +276,18 @@ export const ParticipantUserMapper = {
             lastName: userInfo?.lastName ?? null,
             photo: userInfo?.photo ?? null
         };
+    },
+
+    toParticpantDto(data: any): ParticipantDto {
+        const { userId, budgetId, joinedAt, userExists, firstName, lastName, photo } = data;
+        return {
+            userId,
+            budgetId,
+            userExists: userExists,
+            firstName: firstName ?? null,
+            lastName: lastName ?? null,
+            photo: photo ?? null,
+            joinedAt,
+        };
     }
-}
+} 

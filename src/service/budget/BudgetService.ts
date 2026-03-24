@@ -14,8 +14,8 @@ import { EventBuilder, toEventDto, toParticipant,
      toBudgetDto,
      toCategoryDto,
      toExpenseDto,
-     ParticipantMappers,
-     ParticipantUserMapper} from "../Mappers.js";
+     ParticipantMappers
+    } from "../Mappers.js";
 import { AppError } from "../../core/AppError.js";
 import { HttpError } from "../../core/HttpError.js";
 import { EventType, HttpResponseError, PagedResult } from "../../core/Types.js";
@@ -69,7 +69,7 @@ export class BudgetService {
                 event: type as EventType,
                 budgetId,
                 version: (data as any).version,
-                participant: participantUser
+                participant: ParticipantMappers.toParticpantDto(participantUser)
             };
         }
         
@@ -97,7 +97,7 @@ export class BudgetService {
                 const userInfo = await userRepo.getUserPublicInfo(newParticipant.userId);
 
                 // create participant user
-                const participantUser = ParticipantUserMapper.toParticipantUser(createBudgetEvent, userInfo);
+                const participantUser = ParticipantMappers.toParticipantUser(createBudgetEvent, userInfo);
 
                 return createBudgetEventDto(
                     createBudgetEvent,
@@ -119,7 +119,7 @@ export class BudgetService {
                     // currently skipped and will be handled later.
                     if (null != oldEvent) {
                         const userInfo = await userRepo.getUserPublicInfo(oldEvent.userId);
-                        const participantUser = ParticipantUserMapper.toParticipantUser(oldEvent, userInfo);
+                        const participantUser = ParticipantMappers.toParticipantUser(oldEvent, userInfo);
                         
                         return createBudgetEventDto(
                             oldEvent,
@@ -157,6 +157,23 @@ export class BudgetService {
             }
 
             return toBudgetDto(budget);
+        }
+        catch(err: any) {
+            throw this.mapError(err);
+        }
+    }
+
+    async getBudgetsOfParticipant(userId: string, key: number = 0, count: number = 100): Promise<{ nextKey: number, budgets: BudgetDto[] }> {
+        try {
+            const factory = this.getRepoFactory();
+            const budgetRepo = factory.createBudgetRepo();
+            const budgets = await budgetRepo.getBudgetsOfParticipant(userId, count, key);
+            return {
+                nextKey: key + budgets.length,
+                budgets: budgets.map(b => 
+                    toBudgetDto(b)
+                )
+            };
         }
         catch(err: any) {
             throw this.mapError(err);
@@ -343,8 +360,10 @@ export class BudgetService {
         try {
             const factory = this.client.getRepoFactory()
             const repo = factory.createParticipantRepo();
-            const results = await repo.getParticipantsOfBudget(budgetId);
-            return results;
+            const participantUsers = await repo.getParticipantsOfBudget(budgetId);
+            return participantUsers.map(p => 
+                ParticipantMappers.toParticpantDto(p)
+            );
         }
         catch(err: any) {
             throw this.mapError(err);

@@ -19,6 +19,7 @@ export enum EntityType {
   BUDGET = "budget",
   CATEGORY = "category",
   EXPENSE = "expense",
+  PARTICIPANT = "participant"
 }
 
 export type PagedResult<K,T> = {

@@ -125,7 +125,7 @@ export type RemoveParticipantDto = {
     userId: string,           // participant being removed
 }
 
-export type ParticipantDto = ParticipantUser;
+export type ParticipantDto = Omit<ParticipantUser,"lastModified">;
 
 // Event DTOs
 
