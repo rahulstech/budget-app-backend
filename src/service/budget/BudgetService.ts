@@ -885,7 +885,14 @@ export class BudgetService {
                 const dtos: EventDto[] = []
 
                 for(const event of events) {
-                    if (event.type === EventType.ADD_PARTICIPANT) {
+                    if (event.type == EventType.CREATE_BUDGET) {
+                        const participant = await this.getParticipantById(factory,event.userId,event.budgetId);
+                        dtos.push({
+                            ...toEventDto(event),
+                            participant
+                        })
+                    }
+                    else if (event.type === EventType.ADD_PARTICIPANT) {
                         const participant = await this.getParticipantById(factory,event.userId,event.budgetId);
                         dtos.push({
                             ...toEventDto(event),
