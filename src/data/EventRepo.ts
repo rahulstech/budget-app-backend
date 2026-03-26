@@ -11,4 +11,6 @@ export interface EventRepo {
     getBudgetEvents(
         budgetId: string, excludeUserId: string, lastSequence: number, itemCount: number
     ): Promise<Omit<Event,"serverCreatedAt">[]>
+
+    getLastEventSequenceOfBudget(budgetId: string): Promise<number|null>
 }

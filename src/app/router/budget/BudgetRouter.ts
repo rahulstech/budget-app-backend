@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
-import { BudgetIdParamsSchema, BudgetsOfParticipantQuerySchema, GetCategorySnapShotParamsSchema, GetExpenseSnapShotParamsSchema, PostBudgetBodySchema } from "./BudgetValidationSchemas.js";
+import { BudgetIdParamsSchema, BudgetsOfParticipantQuerySchema, GetCategorySnapShotParamsSchema, GetExpenseSnapShotParamsSchema, GetExpensesSnapShotQuerySchema, PostBudgetBodySchema } from "./BudgetValidationSchemas.js";
 import { asyncHandler } from "../../Helper.js";
 import { validateBody, validateParams, validateQuery } from "../../middleware/Validators.js";
-import { handleGetBudgetsOfParticipant, handleGetSnapShot, handleJoinBudget, handleLeaveBudget, handlePostBudget } from "../../controller/BudgetController.js";
+import { handleGetBudgetsOfParticipant, handleGetLastEventSequenceOfBudget, handleGetSnapShot, handleJoinBudget, handleLeaveBudget, handlePostBudget } from "../../controller/BudgetController.js";
 import { EntityType } from "../../../core/Types.js";
 
 
@@ -35,6 +35,7 @@ budgetRouter.post(
 ));
 
 
+
 // get budgets of participants
 budgetRouter.get(
   "/budgets",
@@ -50,6 +51,7 @@ budgetRouter.get(
 )
 
 
+
 const budgetsRouter = Router({ mergeParams: true });
 
 budgetRouter.use(
@@ -57,6 +59,8 @@ budgetRouter.use(
   validateParams(BudgetIdParamsSchema),
   budgetsRouter
 );
+
+
 
 // join budget as participant
 budgetsRouter.get(
@@ -91,7 +95,6 @@ budgetsRouter.delete(
 // get budget snapshot
 budgetsRouter.get(
   buildRoute(),
-  validateParams(BudgetIdParamsSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { budgetId } = req.validatedParams!!;
     const userId = req.userId;
@@ -104,6 +107,25 @@ budgetsRouter.get(
     res.json(result);
   })
 )
+
+
+
+// get snapshot of budget categories
+budgetsRouter.get(
+  buildRoute("categories"), 
+  asyncHandler(async (req: Request, res: Response) => {
+    const { budgetId } = req.validatedParams!!;
+    const userId = req.userId;
+    const service = req.budgetService;
+
+    const result = await handleGetSnapShot(
+                      service, 
+                      { userId, entity: EntityType.CATEGORY, budgetId }
+                    );
+    res.json(result);
+  })
+)
+
 
 
 // get category snapshot
@@ -124,7 +146,28 @@ budgetsRouter.get(
 )
 
 
-// get expense snapshot
+
+// get snapshot of budget expenses with pagination
+budgetsRouter.get(
+  buildRoute("expenses"), 
+  validateQuery(GetExpensesSnapShotQuerySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { budgetId } = req.validatedParams!!;
+    const { key, count } = req.validatedQuery!!;
+    const userId = req.userId;
+    const service = req.budgetService;
+
+    const result = await handleGetSnapShot(
+                      service, 
+                      { userId, entity: EntityType.EXPENSE, budgetId, key, count }
+                    );
+    res.json(result);
+  })
+)
+
+
+
+// get expense snapshot by id
 budgetsRouter.get(
   buildRoute("expenses",":expenseId"), 
   validateParams(GetExpenseSnapShotParamsSchema),
@@ -141,6 +184,8 @@ budgetsRouter.get(
   })
 )
 
+
+
 // get all participants snapshot
 budgetsRouter.get(
   buildRoute("participants"), 
@@ -154,5 +199,21 @@ budgetsRouter.get(
                       { userId, entity: EntityType.PARTICIPANT, budgetId }
                     );
     res.json(result);
+  })
+)
+
+
+
+// get last event sequence of budget
+budgetsRouter.get(
+  buildRoute("last-event-sequence"),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { budgetId } = req.params;
+    const userId = req.userId;
+    const service = req.budgetService;
+
+    const response = await handleGetLastEventSequenceOfBudget(service, { userId, budgetId });
+
+    res.json(response);
   })
 )

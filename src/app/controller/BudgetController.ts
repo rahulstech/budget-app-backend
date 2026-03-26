@@ -39,7 +39,7 @@ export async function handleLeaveBudget(service: BudgetService, params: Controll
 }
 
 export async function handleGetSnapShot(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
-  const { userId, entity, budgetId, recordId } = params;
+  const { userId, entity, budgetId, recordId, key, count } = params;
 
   await service.canGetSnapShotOrThrow(budgetId, userId);
 
@@ -48,19 +48,28 @@ export async function handleGetSnapShot(service: BudgetService, params: Controll
       return service.getBudget(budgetId);
     }
     case EntityType.CATEGORY: {
-      return service.getCategory(recordId);
+      if (recordId) {
+        return getSnapShotOfCategory(service, recordId);
+      }
+      else {
+        return getSnapShotOfCategories(service, budgetId);
+      }
     }
     case EntityType.EXPENSE: {
-      return service.getExpense(recordId);
+      if (recordId) {
+        return getSnapShotOfExpense(service, recordId)
+      }
+      else {
+        return getSnapShotOfExpenses(service, budgetId, key, count)
+      }
     }
     case EntityType.PARTICIPANT: {
-      return { participants: await service.getParticipantsOfBudget(budgetId) };
+      return getSnapShotOfParticipants(service,budgetId);
     }
   }
 
   throw new HttpError.ServerError(`can not get snaphot of unknow entity ${entity}`);
 }
-
 
 export async function handleGetBudgetsOfParticipant(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
   const { userId, key, count } = params;
@@ -71,4 +80,46 @@ export async function handleGetBudgetsOfParticipant(service: BudgetService, para
     nextKey,
     budgets,
   };
+}
+
+export async function handleGetLastEventSequenceOfBudget(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
+  const { budgetId, userId } = params;
+
+  await service.canGetSnapShotOrThrow(budgetId, userId);
+
+  const lastSequence = await service.getLastEventSequence(budgetId);
+
+  return {
+    budgetId,
+    lastSequence
+  };
+}
+
+async function getSnapShotOfExpense(service: BudgetService, expenseId: string): Promise<ResponseModel> {
+  return service.getExpense(expenseId);
+}
+
+async function getSnapShotOfExpenses(service: BudgetService, budgetId: string, key: number, count: number): Promise<ResponseModel> {
+  const { nextKey, items } = await service.getExpensesOfBudget(budgetId, key, count);
+  return { 
+    budgetId,
+    key,
+    nextKey,
+    expenses: items
+  };
+}
+
+
+async function getSnapShotOfCategory(service: BudgetService, categoryId: string): Promise<ResponseModel> {
+  return service.getCategory(categoryId)
+}
+
+async function getSnapShotOfCategories(service: BudgetService, budgetId: string): Promise<ResponseModel> {
+  const result = await service.getCategoriesOfBudget(budgetId)
+  return { categories: result };
+}
+
+async function getSnapShotOfParticipants(service: BudgetService, budgetId: string): Promise<ResponseModel> {
+  const result = await service.getParticipantsOfBudget(budgetId);
+  return { participants: result };
 }

@@ -332,7 +332,7 @@ export class BudgetService {
      */
     async addParticipant(dto: AddParticipantDto): Promise<{ budget?: BudgetDto, participant?: ParticipantUser, error?: HttpResponseError }> {
         try {
-             await this.policy.canAddParticipant(this.getRepoFactory(), dto.budgetId, dto.userId);
+            await this.policy.canAddParticipant(this.getRepoFactory(), dto.budgetId, dto.userId);
 
             return await this.client.runInTransaction(async (factory) => {
                 const { participant } = await this.insertParticipant(factory, dto);
@@ -685,14 +685,18 @@ export class BudgetService {
         }
     }
 
-    async getExpensesOfBudget(budgetId: string, key: number, count: number): Promise<PagedResult<number,ExpenseDto>> {
+    async getExpensesOfBudget(budgetId: string, key: number, count: number = MAX_RESULTS): Promise<PagedResult<number,ExpenseDto>> {
         const limit = Math.min(count, MAX_RESULTS);
-        const offset = (key-1)*limit;
+        const offset = 0; //key <= 0 ? 0 : (key-1)*limit;
 
         try {
             const expenseRepo = this.getRepoFactory().createExpenseRepo();
             const items = await expenseRepo.getExpenses(budgetId,limit,offset);
-            return { key, items: items.map(e => toExpenseDto(e as any)) };
+
+            return { 
+                key,
+                nextKey: key + items.length,
+                items: items.map(e => toExpenseDto(e)) };
         }
         catch(err: any) {
             throw this.mapError(err);
@@ -868,7 +872,7 @@ export class BudgetService {
      *
      * Returns an array of EventDto
      */
-    async getEvents(budgetId: string, userId: string, key: number = 0, count: number = MAX_RESULTS): Promise<EventDto[]> {
+    async getEvents(budgetId: string, userId: string, key: number = 0, count: number = MAX_RESULTS): Promise<PagedResult<number, EventDto>> {
 
         try {
             await this.policy.canSyncEvents(this.getRepoFactory(), budgetId,userId);
@@ -903,8 +907,24 @@ export class BudgetService {
                         dtos.push(toEventDto(event));
                     }
                 }
-                return dtos;
+                return {
+                    key,
+                    nextKey: dtos.length > 0 ? dtos[dtos.length-1].sequence : key,
+                    items: dtos
+                };
             });
+        }
+        catch(err: any) {
+            throw this.mapError(err);
+        }
+    }
+
+    async getLastEventSequence(budgetId: string): Promise<number> {
+        try {
+            const factory = this.getRepoFactory();
+            const repo = factory.createEventRepo();
+            const lastSequence = await repo.getLastEventSequenceOfBudget(budgetId);
+            return lastSequence ?? 0;
         }
         catch(err: any) {
             throw this.mapError(err);

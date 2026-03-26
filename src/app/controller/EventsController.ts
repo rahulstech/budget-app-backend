@@ -142,13 +142,12 @@ export async function handlePostEvents(service: BudgetService, params: Controlle
 // Sync events
 export async function handleGetEvents(service: BudgetService, params: ControllerParams): Promise<ResponseModel> {
   const { userId, budgetId, key, count } = params;
-  const events = await service.getEvents(budgetId, userId, key, count);
-  const nextKey = events.length > 0 ? events[events.length-1].sequence : key;
+  const { nextKey, items } = await service.getEvents(budgetId, userId, key, count);
   return {
     budgetId,
     key,
     nextKey,
-    events 
+    events: items
   };
 }
 

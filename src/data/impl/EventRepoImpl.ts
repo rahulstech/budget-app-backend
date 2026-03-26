@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ne, sql } from "drizzle-orm";
 import { EventRepo } from "../EventRepo.js";
 import { events } from "../schema/Tables.js";
 import { Database, Event } from "../Models.js";
@@ -94,6 +94,25 @@ export class EventRepoImpl implements EventRepo {
                 context: { budgetId, excludeUserId, lastSequence, itemCount },
                 message: "get budget events failed"
             });
+        }
+    }
+
+    async getLastEventSequenceOfBudget(budgetId: string): Promise<number|null> {
+        try {
+            const [row] = await this.db.select({ sequence: events.sequence })
+                        .from(events)
+                        .where(eq(events.budgetId, budgetId))
+                        .orderBy(desc(events.serverCreatedAt))
+                        .limit(1);
+
+            return row?.sequence ?? null;
+        }
+        catch(error: any) {
+            throw RepoError.create({
+                error,
+                context: { budgetId },
+                message: "get last event sequence of budget failed"
+            })
         }
     }
 }

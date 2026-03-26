@@ -3,6 +3,7 @@ import { ExpenseRepo } from "../ExpenseRepo.js";
 import { expenses } from "../schema/Tables.js";
 import { Database, Expense, UpdateExpenseModel } from "../Models.js";
 import { RecordNotFound, RepoError, VersionMismatchError } from "../RepoError.js";
+import { logDebug } from "../../core/Logger.js";
 
 export class ExpenseRepoImpl implements ExpenseRepo {
 
@@ -45,6 +46,9 @@ export class ExpenseRepoImpl implements ExpenseRepo {
     async getExpenses(
         budgetId: string, limit: number, offset: number = 20
     ): Promise<Omit<Expense,"serverCreatedAt">[]> {
+
+        logDebug("get expenses of budget", { budgetId, limit, offset });
+        
         try {
             return await this.db
                 .select({

@@ -24,6 +24,7 @@ export enum EntityType {
 
 export type PagedResult<K,T> = {
   key: K,
+  nextKey?: K,
   items: T[],
 }
 
