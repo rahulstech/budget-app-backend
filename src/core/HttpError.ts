@@ -9,7 +9,7 @@ export class HttpError extends AppError {
 
     readonly issues?: HttpError.ErrorItem[]
 
-    constructor(readonly statusCode: number, message?: string, cause?: any, shouldShutdown: boolean = false) {
+    constructor(readonly statusCode: number, message?: string | null, cause?: any, shouldShutdown: boolean = false) {
         super(
             message ?? getHttpStatusMessage(statusCode), 
             shouldShutdown,

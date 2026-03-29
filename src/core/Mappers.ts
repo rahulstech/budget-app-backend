@@ -7,5 +7,5 @@ export function mapZodErrorToHttpError(error: z.ZodError, statusCode: number = 4
         const path = issue.path.join(":").toUpperCase();
         return `${code}|${path}`;
     });
-    return new HttpError(statusCode, items);
+    return new HttpError(statusCode, null, items);
 }

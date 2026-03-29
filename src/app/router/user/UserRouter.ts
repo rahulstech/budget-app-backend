@@ -77,14 +77,3 @@ userRouter.delete("/user/profile-photo",
     })
 )
 
-
-export const noauthUserRoutes = Router();
-
-noauthUserRoutes.get("/users/:userId",asyncHandler(async (req: Request, res: Response)=> {
-    const params = req.params;
-    const userService = req.userService;
-
-    const response = await handleGetUserPublicInfo(userService, params);
-
-    res.json(response);
-}))

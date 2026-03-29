@@ -4,10 +4,11 @@ import express, { Express, Request, Response, NextFunction } from "express";
 import { HttpError } from "../core/HttpError.js";
 import { httpLogger } from "./middleware/LoggerMiddleware.js";
 import { checkApiKey, extractUserId } from "./middleware/SecurityMiddleware.js";
-import { noauthUserRoutes, userRouter } from "./router/user/UserRouter.js";
+import { userRouter } from "./router/user/UserRouter.js";
 import { UserService } from "../service/user/UserService.js";
 import { eventRouter } from "./router/event/EventRouter.js";
 import { AppError } from "../core/AppError.js";
+import { profileRoutes } from "./router/user/ProfileRoutes.js";
 
 
 export function createApp(budgetService: BudgetService, userService: UserService): Express {
@@ -30,7 +31,7 @@ export function createApp(budgetService: BudgetService, userService: UserService
     /**
      * no auth app routes
      */
-    app.use(noauthUserRoutes);
+    app.use(profileRoutes);
 
     app.use(extractUserId());
 

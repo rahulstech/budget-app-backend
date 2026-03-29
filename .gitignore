@@ -3,3 +3,6 @@
 *.env
 !example.env
 */*.pem
+prod.env.json
+/build
+server.zip
