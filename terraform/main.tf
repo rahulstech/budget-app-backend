@@ -6,10 +6,18 @@ terraform {
       version = "~> 6.37.0"
     }
   }
+
+
+  backend "s3" {
+    bucket         = "terraform-state-825765402259-ap-south-1-an"
+    key            = "budget-app/terraform-state/terraform.tfstate"
+    region         = "ap-south-1"
+    dynamodb_table = "terraform-lock"
+  }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = var.AWS_REGION
 }
 
 
@@ -208,7 +216,8 @@ resource "aws_lambda_function" "budget_server" {
       local.env,
       {
         BASE_URL = aws_apigatewayv2_api.budget_server_rest_api.api_endpoint,
-        S3_REGION = var.aws_region,
+
+        S3_REGION = var.AWS_REGION,
         S3_BUCKET  = aws_s3_bucket.budget_app_storage.bucket
         CDN_BASE_URL = "https://${aws_cloudfront_distribution.budget_app_storage_distribution.domain_name}"
       }
@@ -307,6 +316,17 @@ resource "aws_apigatewayv2_route" "route_profiles" {
 
 
 # auth routes
+
+resource "aws_apigatewayv2_route" "route_budget" {
+  api_id = aws_apigatewayv2_api.budget_server_rest_api.id
+
+  route_key = "POST /budget"
+
+  target = "integrations/${aws_apigatewayv2_integration.budget_server_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id = aws_apigatewayv2_authorizer.jwt_authorizer.id
+}
 
 resource "aws_apigatewayv2_route" "route_budgets" {
   api_id = aws_apigatewayv2_api.budget_server_rest_api.id

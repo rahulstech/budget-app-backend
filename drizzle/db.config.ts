@@ -2,12 +2,18 @@ import { configDotenv } from "dotenv";
 
 const NODE_ENV = process.env.NODE_ENV ?? "dev";
 
-const env: any = {};
+let env: any = {};
 
-configDotenv({ 
-  path: `${NODE_ENV}.env`,
-  processEnv: env
- });
+
+if (process.env.NODE_ENV === "prod") {
+  env = process.env
+}
+else {
+  configDotenv({ 
+    path: `${NODE_ENV}.env`,
+    processEnv: env
+  });
+}
 
 const {
   DB_HOST,
@@ -17,7 +23,7 @@ const {
   DB_NAME,
   DB_USE_SSL,
   DB_SSL_CA_BASE64
-} = env as any;
+} = env;
 
 const port = typeof DB_PORT === "undefined" ? undefined : Number(DB_PORT);
 

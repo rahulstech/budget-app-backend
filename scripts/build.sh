@@ -2,16 +2,17 @@
 
 set -e
 
-echo "Building Lambda package..."
+# clean old build output
+npm run clean
 
-rm -rf build server.zip dist
+echo "Building Lambda package..."
 
 # Install ALL deps (needed for tsc)
 echo "Installing dependencies..."
 npm ci
 
 # Build TS
-echo "🔨 Compiling TypeScript..."
+echo "Compiling TypeScript..."
 npx tsc
 
 # Create build dir
@@ -36,4 +37,4 @@ zip -r ../server.zip .
 
 cd ..
 
-echo "✅ Build complete"
+echo "Build complete"
