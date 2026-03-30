@@ -135,6 +135,21 @@ resource "aws_s3_bucket_policy" "budget_app_storage_policy" {
 
 
 ###########################################
+###            CloudWatch               ###
+###########################################
+
+resource "aws_cloudwatch_log_group" "budget_server_log_group" {
+  name              = "/aws/lambda/budget_server"
+  retention_in_days = 7 
+
+  tags = {
+    Application = local.tags.Application
+  }
+}
+
+
+
+###########################################
 ###               Lambda                ###
 ###########################################
 
@@ -227,7 +242,14 @@ resource "aws_lambda_function" "budget_server" {
   tags = {
     Application = local.tags.Application
   }
+
+  depends_on = [
+    aws_cloudwatch_log_group.budget_server_log_group,
+    aws_iam_role_policy.lambda_logs  # ensures permissions are also ready
+  ]
 }
+
+
 
 ###########################################
 ###            API Gateway              ###
