@@ -10,9 +10,11 @@ import { eventRouter } from "./router/event/EventRouter.js";
 import { AppError } from "../core/AppError.js";
 import { profileRoutes } from "./router/user/ProfileRoutes.js";
 import { logError } from "../core/Logger.js";
+import { AuthService } from "../service/auth/AuthService.js";
+import { ServiceProvider } from "./ServiceProvider.js";
 
 
-export function createApp(budgetService: BudgetService, userService: UserService): Express {
+export function createApp(services: ServiceProvider): Express {
     const app: Express = express();
 
     app.use(checkApiKey());
@@ -22,8 +24,10 @@ export function createApp(budgetService: BudgetService, userService: UserService
     app.use(httpLogger());
 
     app.use((req: Request, _res: Response, next: NextFunction)=> {
+        const { budgetService, userService, authService } = services;
         req.budgetService = budgetService;
         req.userService = userService;
+        req.authService = authService;
         next();
     });
 
@@ -56,7 +60,7 @@ export function createApp(budgetService: BudgetService, userService: UserService
      * Router Error handler
      */
     app.use((err: Error, _req: Request, res: Response, _next: NextFunction)=> {
-        
+        logError("unhandled api error occurred", { err });
 
         if (err instanceof HttpError) {
             res.status(err.statusCode)
@@ -68,8 +72,6 @@ export function createApp(budgetService: BudgetService, userService: UserService
              });
         }
         else if (err instanceof AppError) {
-            logError(err.message, { cause: err.cause, shutdown: err.shouldShutdown });
-
             res.status(500)
             .json({ 
                 error: {
@@ -79,7 +81,6 @@ export function createApp(budgetService: BudgetService, userService: UserService
              });
         }
         else {
-            logError("unhandled api error occurred", { err });
             res.status(500).json({
                 error: {
                     statusCode: 500,

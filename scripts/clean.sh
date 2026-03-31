@@ -2,4 +2,6 @@
 
 echo "cleaning previous build outputs"
 
-rm -rf build dist server.zip
+rm -rf dist
+
+echo "cleaning complete"

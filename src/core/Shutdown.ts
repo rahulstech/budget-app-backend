@@ -44,6 +44,6 @@ function shutdownOnUnhandledError(errorType: string) {
 
 
 
-["SIGINT","SIGTERM"].forEach(signal => shutdownOnSignal(signal));
+["SIGINT"].forEach(signal => shutdownOnSignal(signal));
 
 ["uncaughtException", "unhandledRejection"].forEach(errorType => shutdownOnUnhandledError(errorType));

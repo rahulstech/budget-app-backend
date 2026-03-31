@@ -35,14 +35,11 @@ jobs:
             npm run drizzle:prod:migrate
 
 
-    deploy_budget_server:
+    deploy_storage_and_cdn:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
-
-            - name: Build server.zip
-              uses: ./.github/actions/build-server # finds action.yml or action.yaml; if different name then mention explicitly
 
             - name: Confugure AWS
               uses: aws-actions/configure-aws-credentials@v4
@@ -57,35 +54,9 @@ jobs:
             - name: Terraform Init
               run: terraform init 
               working-directory: ./terraform
-              env: 
-                TF_VAR_NODE_ENV: ${{ secrets.NODE_ENV }}
-                TF_VAR_DB_HOST: ${{ secrets.DB_HOST }}
-                TF_VAR_DB_PORT: ${{ secrets.DB_PORT }}
-                TF_VAR_DB_USER: ${{ secrets.DB_USER }}
-                TF_VAR_DB_PASS: ${{ secrets.DB_PASS }}
-                TF_VAR_DB_NAME: ${{ secrets.DB_NAME }}
-                TF_VAR_DB_MAX_CONNECTION: ${{ secrets.DB_MAX_CONNECTION }}
-                TF_VAR_DB_USE_SSL: ${{ secrets.DB_USE_SSL }}
-                TF_VAR_DB_SSL_CA_BASE64: ${{ secrets.DB_SSL_CA_BASE64 }}
-                TF_VAR_API_KEY_ANDROID: ${{ secrets.API_KEY_ANDROID }}
-                TF_VAR_AWS_REGION: ${{ secrets.AWS_REGION }}
-                TF_VAR_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-                TF_VAR_server_zip_filename: "../server.zip"
 
             - name: Terrafrom Apply
               run: terraform apply -auto-approve
               working-directory: ./terraform
               env: 
-                TF_VAR_NODE_ENV: ${{ secrets.NODE_ENV }}
-                TF_VAR_DB_HOST: ${{ secrets.DB_HOST }}
-                TF_VAR_DB_PORT: ${{ secrets.DB_PORT }}
-                TF_VAR_DB_USER: ${{ secrets.DB_USER }}
-                TF_VAR_DB_PASS: ${{ secrets.DB_PASS }}
-                TF_VAR_DB_NAME: ${{ secrets.DB_NAME }}
-                TF_VAR_DB_MAX_CONNECTION: ${{ secrets.DB_MAX_CONNECTION }}
-                TF_VAR_DB_USE_SSL: ${{ secrets.DB_USE_SSL }}
-                TF_VAR_DB_SSL_CA_BASE64: ${{ secrets.DB_SSL_CA_BASE64 }}
-                TF_VAR_API_KEY_ANDROID: ${{ secrets.API_KEY_ANDROID }}
                 TF_VAR_AWS_REGION: ${{ secrets.AWS_REGION }}
-                TF_VAR_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-                TF_VAR_server_zip_filename: "../server.zip"

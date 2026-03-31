@@ -3,19 +3,24 @@ import { HttpError } from "../../core/HttpError.js";
 import { Environment, isProdEnvironment } from "../../core/Environment.js";
 
 export function extractUserId(): RequestHandler {
-    return (req: Request, _res: Response, next: NextFunction)=> {
-        if (req.apiGateway) {
-            const claim = req.apiGateway?.event?.requestContext?.authorizer?.claim;
-            if (claim) {
-                req.userId = claim.sub;
-                return next();
+    return async (req: Request, _res: Response, next: NextFunction)=> {
+        const httpUnauthorized = new HttpError.Unauthorized("NOT_LOGGED_IN");
+        if (isProdEnvironment()) {
+            const authService = req.authService!!;
+            const authrization = req.headers["authorization"];
+            const idToken = authService.extractIdTokenFromHeader(authrization);
+            if (null === idToken) {
+                return next(httpUnauthorized);
             }
+            const authUser = await authService.verifyIdToken(idToken);
+            req.userId = authUser.userId;
+            return next();
         }
-        if (typeof req.headers.authorization === "string") {
+        else if (typeof req.headers.authorization === "string") {
             req.userId = req.headers.authorization;
             return next();
         }
-        next(new HttpError(401, "NOT_LOGGED_IN"));
+        next(httpUnauthorized);
     }
 }
 

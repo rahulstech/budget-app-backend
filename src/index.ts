@@ -1,29 +1,23 @@
-import serverless from "serverless-http";
 import { createApp } from "./app/App.js";
 import { getServiceProvider } from "./app/ServiceProvider.js";
 import { initEnvironment } from "./core/Environment.js";
 import { logFatal } from "./core/Logger.js";
 
-let handler: ReturnType<typeof serverless>;
-
+const SERVER_PORT = process.env.PORT || 3000;
 
 try {
-    // init environment variables
     initEnvironment();
 
-    // get services
-    const { budgetService, userService } = getServiceProvider();
+    const services = getServiceProvider();
 
-    // create express app
-    const app = createApp(budgetService,userService);
+    const app = createApp(services);
 
-    // handle lambda event
-    handler = serverless(app, {
-        provider: 'aws',
+    app.listen(SERVER_PORT,(error?: Error)=> {
+        if (error) {
+            logFatal("server closed with error", {error});
+        }
     });
 }
 catch(err: any) {
     logFatal("server initialization error", { err });
 }
-
-export { handler };

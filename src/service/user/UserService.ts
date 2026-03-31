@@ -67,7 +67,7 @@ export class UserService {
 
             return toUserDto(user);
         }
-        catch(err: any) {
+        catch(err: any) { 
             throw this.mapError(err);
         }
     }

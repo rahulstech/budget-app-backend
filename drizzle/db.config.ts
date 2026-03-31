@@ -31,7 +31,7 @@ const useSSL = DB_USE_SSL === "true";
 
 const ssl = useSSL ? 
         { 
-          ca: Buffer.from(DB_SSL_CA_BASE64!,"base64").toString("utf-8"),
+          ca: Buffer.from(DB_SSL_CA_BASE64!,"base64url").toString("utf-8"),
           rejectUnauthorized: true
         }
         : false;

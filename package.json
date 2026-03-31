@@ -7,8 +7,8 @@
     "dev": "node --env-file=dev.env --watch --trace-uncaught --trace-warnings --import tsx src/main.ts",
     "build": "tsc",
     "clean": "./scripts/clean.sh",
-    "bundle": "./scripts/bundle.sh",
-    "start": "node --env-file=prod-local.env --watch dist/main.js",
+    "start:local": "node --env-file=prod.env --trace-uncaught --trace-warnings dist/index.js",
+    "start": "node dist/index.js",
     "drizzle:generate": "NODE_ENV=dev drizzle-kit generate --config=./drizzle/drizzle.config.ts",
     "drizzle:generate:custom": "NODE_ENV=dev drizzle-kit generate --config=./drizzle/drizzle.config.ts --custom",
     "drizzle:migrate": "NODE_ENV=dev drizzle-kit migrate --config=./drizzle/drizzle.config.ts",
@@ -20,8 +20,6 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.1002.0",
-    "@aws-sdk/s3-request-presigner": "^3.1002.0",
     "@aws-sdk/types": "^3.973.4",
     "@types/express": "^5.0.6",
     "@types/node": "^25.1.0",
@@ -34,12 +32,14 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1020.0",
+    "@aws-sdk/s3-request-presigner": "^3.1020.0",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
+    "firebase-admin": "^13.7.0",
     "pg": "^8.18.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
-    "serverless-http": "^4.0.0",
     "zod": "^4.3.6"
   }
 }

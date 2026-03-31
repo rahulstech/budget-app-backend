@@ -37,6 +37,13 @@ export namespace HttpError {
         }
     }
 
+    export class Unauthorized extends HttpError {
+
+        constructor(message?: string) {
+            super(401, message);
+        }
+    }
+
     export class Forbidden extends HttpError {
 
         constructor(message?: string) {

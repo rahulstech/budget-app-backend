@@ -1,26 +1,16 @@
 import type { BudgetService } from "../../service/BudgetService.ts";
 import { Logger } from "../core/Logger.ts";
+import { AuthService } from "../service/auth/AuthService.ts";
 import { UserService } from "../service/user/UserService.ts";
 
 declare global {
     namespace Express {
         interface Request {
-
-            apiGateway?: {
-                event?: {
-                    requestContext?: {
-                        authorizer?: {
-                            claim?: {
-                                sub: string,
-                            }
-                        }
-                    }
-                }
-            }
-            
             budgetService: BudgetService,
 
             userService: UserService,
+
+            authService?: AuthService,
 
             userId: string,
 
