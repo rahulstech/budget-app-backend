@@ -138,6 +138,7 @@ resource "aws_s3_bucket_policy" "budget_app_storage_policy" {
 ###            CloudWatch               ###
 ###########################################
 
+# Log group for lambda server
 resource "aws_cloudwatch_log_group" "budget_server_log_group" {
   name              = "/aws/lambda/budget_server"
   retention_in_days = 7 
@@ -146,6 +147,16 @@ resource "aws_cloudwatch_log_group" "budget_server_log_group" {
     Application = local.tags.Application
   }
 }
+
+# Log group for API Gateway
+# resource "aws_cloudwatch_log_group" "budget_server_rest_api_log_group" {
+#   name              = "/aws/apigateway/budget_server_rest_api"
+#   retention_in_days = 7
+
+#   tags = {
+#     Application = local.tags.Application
+#   }
+# }
 
 
 
@@ -281,6 +292,41 @@ resource "aws_lambda_permission" "invoke_budget_server_permission" {
   # any route
   source_arn = "${aws_apigatewayv2_api.budget_server_rest_api.arn}/*/*"
 }
+
+
+
+
+# # IAM role that allows API Gateway to push logs to CloudWatch
+# resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+#   name = "api_gateway_cloudwatch_role"
+
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "apigateway.amazonaws.com"
+#         }
+#         Action = "sts:AssumeRole"
+#       }
+#     ]
+#   })
+# }
+
+# resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_policy" {
+#   role       = aws_iam_role.api_gateway_cloudwatch_role.name
+#   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+# }
+
+# # Account-level setting — links the IAM role to API Gateway
+# resource "aws_api_gateway_account" "main" {
+#   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
+# }
+
+
+
+
 
 # ----------------------------------
 # stages

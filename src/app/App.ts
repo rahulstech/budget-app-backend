@@ -9,6 +9,7 @@ import { UserService } from "../service/user/UserService.js";
 import { eventRouter } from "./router/event/EventRouter.js";
 import { AppError } from "../core/AppError.js";
 import { profileRoutes } from "./router/user/ProfileRoutes.js";
+import { logError } from "../core/Logger.js";
 
 
 export function createApp(budgetService: BudgetService, userService: UserService): Express {
@@ -54,8 +55,8 @@ export function createApp(budgetService: BudgetService, userService: UserService
     /**
      * Router Error handler
      */
-    app.use((err: Error, req: Request, res: Response, _next: NextFunction)=> {
-        console.log(err);
+    app.use((err: Error, _req: Request, res: Response, _next: NextFunction)=> {
+        
 
         if (err instanceof HttpError) {
             res.status(err.statusCode)
@@ -67,6 +68,8 @@ export function createApp(budgetService: BudgetService, userService: UserService
              });
         }
         else if (err instanceof AppError) {
+            logError(err.message, { cause: err.cause, shutdown: err.shouldShutdown });
+
             res.status(500)
             .json({ 
                 error: {
@@ -76,7 +79,13 @@ export function createApp(budgetService: BudgetService, userService: UserService
              });
         }
         else {
-            res.sendStatus(500);
+            logError("unhandled api error occurred", { err });
+            res.status(500).json({
+                error: {
+                    statusCode: 500,
+                    message: "Internal Server Error"
+                }
+            });
         }
     });
 
