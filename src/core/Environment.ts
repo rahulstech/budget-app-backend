@@ -19,13 +19,15 @@ const EnvSchema = z.object({
     CDN_BASE_URL: z.url(),
 });
 
-const parsed = EnvSchema.safeParse(process.env);
+export let Environment: any = process.env as any;
 
-if (!parsed.success) {
-    throw new AppError("error parsing process.env", true, parsed.error);
+export function initEnvironment() {
+    const parsed = EnvSchema.safeParse(process.env);
+    if (!parsed.success) {
+        throw new AppError("error parsing process.env", true, parsed.error);
+    }
+    Environment = parsed.data;
 }
-
-export const Environment = parsed.data;
 
 export const isDevEnvironment = (): boolean =>  process.env.NODE_ENV === "dev";
 

@@ -5,7 +5,7 @@ set -e
 # clean old build output
 npm run clean
 
-echo "Building Lambda package..."
+echo "Bundle Lambda package..."
 
 # Install ALL deps (needed for tsc)
 echo "Installing dependencies..."
@@ -13,7 +13,7 @@ npm ci
 
 # Build TS
 echo "Compiling TypeScript..."
-npx tsc
+npm run build
 
 # Create build dir
 mkdir -p build

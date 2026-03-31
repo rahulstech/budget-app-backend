@@ -1,11 +1,29 @@
 import serverless from "serverless-http";
 import { createApp } from "./app/App.js";
-import { budgetService, userService } from "./app/ServiceProvider.js";
+import { getServiceProvider } from "./app/ServiceProvider.js";
+import { initEnvironment } from "./core/Environment.js";
+import { logFatal } from "./core/Logger.js";
 
-// create express app
-const app = createApp(budgetService,userService);
+let handler: ReturnType<typeof serverless>;
 
-// handle lambda event
-export const handler = serverless(app, {
-    provider: 'aws',
-});
+
+try {
+    // init environment variables
+    initEnvironment();
+
+    // get services
+    const { budgetService, userService } = getServiceProvider();
+
+    // create express app
+    const app = createApp(budgetService,userService);
+
+    // handle lambda event
+    handler = serverless(app, {
+        provider: 'aws',
+    });
+}
+catch(err: any) {
+    logFatal("server initialization error", { err });
+}
+
+export { handler };

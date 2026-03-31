@@ -1,29 +1,49 @@
 import { logFatal } from "./Logger.js";
 
-export type ShutdownCallback = ()=> Promise<void> | void;
+type ShutdownHandler = (cause?: any) => Promise<void> | void;
 
 const shutdownCallbacks: ShutdownCallback[] = [];
+
+export type ShutdownCallback = ()=> Promise<void> | void;
 
 export function onShutdown(callback: ShutdownCallback) {
     shutdownCallbacks.push(callback);
 }
 
-function shutdown(eventName: string, exitCode: number): void {
+
+async function invokeShoutdownCallbacks() {
+    for(const callback of shutdownCallbacks) {
+        try {
+            await callback();
+        }
+        catch(ignore) {}
+    }
+}
+
+function shutdown(eventName: string, exitCode: number, handler: ShutdownHandler): void {
     
     process.on(eventName, async (cause?: any) => {
-        logFatal(`shutdown initiated by ${eventName} with exit code ${exitCode}`, { cause });
-
-        for(const callback of shutdownCallbacks) {
-            try {
-                await callback();
-            }
-            catch(ignore) {}
-        }
-
+        await handler(cause);
         process.exit(exitCode);
     })
 }
 
-["SIGINTR","SIGTER"].forEach(signal => shutdown(signal, 0));
+function shutdownOnSignal(signal: string) {
+    shutdown(signal, 0, async () => {
+        invokeShoutdownCallbacks();
+    });
+} 
 
-["uncaughtException", "unhandledRejection"].forEach(reason => shutdown(reason, 1));
+function shutdownOnUnhandledError(errorType: string) {
+    shutdown(errorType, 1, async (cause?: any) => {
+        logFatal(`unhandled error ${errorType}`, { cause });
+
+        invokeShoutdownCallbacks();
+    });
+}
+
+
+
+["SIGINT","SIGTERM"].forEach(signal => shutdownOnSignal(signal));
+
+["uncaughtException", "unhandledRejection"].forEach(errorType => shutdownOnUnhandledError(errorType));
