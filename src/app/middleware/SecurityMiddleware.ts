@@ -13,6 +13,9 @@ export function extractUserId(): RequestHandler {
                 return next(httpUnauthorized);
             }
             const authUser = await authService.verifyIdToken(idToken);
+            if (null === authUser) {
+                return next(httpUnauthorized);
+            }
             req.userId = authUser.userId;
             return next();
         }

@@ -4,7 +4,6 @@ export type AuthUser = {
     userId: string;
 };
 
-
 export class AuthService {
 
 
@@ -21,12 +20,17 @@ export class AuthService {
         return serviceAccount;
     }
 
-    async verifyIdToken(idToken: string): Promise<AuthUser> {
-        const decoded = await admin.auth().verifyIdToken(idToken);
-        const authUser: AuthUser = { 
-            userId: decoded.sub
-        };
-        return authUser;
+    async verifyIdToken(idToken: string): Promise<AuthUser|null> {
+        try {
+            const decoded = await admin.auth().verifyIdToken(idToken);
+            const authUser: AuthUser = { 
+                userId: decoded.sub
+            };
+            return authUser;
+        }
+        catch(err: any) {
+            return null;
+        }
     }
 
     extractIdTokenFromHeader(header: any): string | null {
