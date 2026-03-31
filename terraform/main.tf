@@ -149,14 +149,14 @@ resource "aws_cloudwatch_log_group" "budget_server_log_group" {
 }
 
 # Log group for API Gateway
-# resource "aws_cloudwatch_log_group" "budget_server_rest_api_log_group" {
-#   name              = "/aws/apigateway/budget_server_rest_api"
-#   retention_in_days = 7
+resource "aws_cloudwatch_log_group" "budget_server_rest_api_log_group" {
+  name              = "/aws/apigateway/budget_server_rest_api"
+  retention_in_days = 7
 
-#   tags = {
-#     Application = local.tags.Application
-#   }
-# }
+  tags = {
+    Application = local.tags.Application
+  }
+}
 
 
 
@@ -296,33 +296,33 @@ resource "aws_lambda_permission" "invoke_budget_server_permission" {
 
 
 
-# # IAM role that allows API Gateway to push logs to CloudWatch
-# resource "aws_iam_role" "api_gateway_cloudwatch_role" {
-#   name = "api_gateway_cloudwatch_role"
+# IAM role that allows API Gateway to push logs to CloudWatch
+resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+  name = "api_gateway_cloudwatch_role"
 
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Principal = {
-#           Service = "apigateway.amazonaws.com"
-#         }
-#         Action = "sts:AssumeRole"
-#       }
-#     ]
-#   })
-# }
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
 
-# resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_policy" {
-#   role       = aws_iam_role.api_gateway_cloudwatch_role.name
-#   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
-# }
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_policy" {
+  role       = aws_iam_role.api_gateway_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
 
-# # Account-level setting — links the IAM role to API Gateway
-# resource "aws_api_gateway_account" "main" {
-#   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
-# }
+# Account-level setting — links the IAM role to API Gateway
+resource "aws_api_gateway_account" "api_gateway_account" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
+}
 
 
 
@@ -336,6 +336,23 @@ resource "aws_apigatewayv2_stage" "budget_server_stage_default" {
   api_id = aws_apigatewayv2_api.budget_server_rest_api.id
   name = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.budget_server_log_group.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      path           = "$context.path"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      errorMessage   = "$context.error.message"
+    }) 
+  }
+
+  depends_on = [ aws_api_gateway_account.api_gateway_account ]
 }
 
 # ----------------------------------
