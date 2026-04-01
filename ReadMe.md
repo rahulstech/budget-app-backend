@@ -1,18 +1,39 @@
 <div align="center">
   <img src="./budgetify.png" alt="Budgetify Icon" style="width: 150px; height: 150px; border-radius: 15%"/>
 
-# Budget App Backend — Event-Driven & Serverless
+# Budget App Backend — Event-Driven
 
 > Backend system powering an **offline-first collaborative budgeting app**. Accepts immutable client events, resolves conflicts via server-authoritative versioning, and delivers ordered change streams to keep multiple devices eventually consistent.
 
 [![Node.js](https://img.shields.io/badge/Runtime-Node.js-green)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue)](https://www.typescriptlang.org)
-[![AWS](https://img.shields.io/badge/Cloud-AWS-orange)](https://aws.amazon.com)
+[![Railway](https://img.shields.io/badge/Hosting-Railway-blueviolet)](https://railway.app)
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-purple)](https://www.terraform.io)
 
 **[Android App](https://github.com/rahulstech/budget-app-android) · [LinkedIn](https://www.linkedin.com/in/rahul-bagchi-176a63212/) · [GitHub](https://github.com/rahulstech) · [Email](mailto:rahulstech18@gmail.com)**
 
 </div>
+
+---
+
+## Contents
+
+- [Why This Project Exists](#why-this-project-exists)
+- [System Overview](#system-overview)
+- [Architecture](#architecture)
+- [API Reference](#api-reference)
+- [Event Processing Model](#event-processing-model)
+- [Conflict Resolution](#conflict-resolution)
+- [Database Design](#database-design)
+- [Cloud Infrastructure](#cloud-infrastructure)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Setup & Installation](#setup--installation)
+- [Testing](#testing)
+- [Limitations & Trade-offs](#limitations--trade-offs)
+- [Roadmap](#roadmap)
+- [Author](#-author--rahul-bagchi)
 
 ---
 
@@ -31,7 +52,7 @@ This is the backend counterpart to a [collaborative Android budgeting app](https
 ```
 Client
   │
-  ├── POST /events          → API Gateway → Lambda → PostgreSQL
+  ├── POST /events          → Railway (Node.js server) → PostgreSQL (Aiven)
   │                                 ↓
   │                         Firebase Auth (per-request token validation)
   │
@@ -42,36 +63,38 @@ Client
                                     CloudFront CDN (serves profile photos)
 ```
 
-**Infrastructure managed entirely via Terraform.** No manual console configuration.
+**Server hosted on Railway. S3 and CloudFront provisioned via Terraform. Database managed by Aiven.**
 
 ---
 
 ## Architecture
 
-### Single Lambda, Monolithic Handler
+### Single Node.js Server on Railway
 
-All routes are handled by one Lambda function rather than separate per-route Lambdas. This was a deliberate decision: a monolithic handler shares a single initialization lifecycle, which means the PostgreSQL connection pool is created once per warm Lambda instance and reused across requests. Per-route Lambdas would each maintain their own cold start and their own pool, multiplying connection overhead against the database.
+All routes are handled by one Express server deployed as a persistent Node.js process on Railway. This replaces the previous Lambda-based setup entirely — there is no API Gateway or Lambda in the current architecture.
 
-The trade-off is coarser deploy granularity — any change deploys the entire handler. At this scale, that's acceptable.
+Running as a long-lived process means the server initialises once and stays up. There are no cold starts, and no per-invocation initialisation overhead.
 
 ### Connection Pooling
 
-Lambda connects to PostgreSQL via a **`pg` connection pool initialized at module load time** (outside the handler function). This means a warm Lambda instance reuses existing connections across invocations rather than opening a new connection per request. The known limitation is that under high concurrency, multiple Lambda instances each maintain their own pool — a case where RDS Proxy would help. That's documented in Limitations.
+The PostgreSQL connection pool is initialised at startup and reused across all incoming requests for the lifetime of the process. Because Railway runs a persistent server (not ephemeral function instances), the pool behaves as expected — connections are held and reused rather than torn down between requests. If Railway scales to multiple instances, each maintains its own pool; at current scale this is not a concern.
 
 ### Authentication
 
-Every request passes through an **API Gateway Lambda Authorizer** backed by **Firebase Admin SDK**. The authorizer validates the Firebase JWT, extracts the user ID, and injects it into the request context. Business logic never handles raw tokens.
+Every request passes through a **middleware layer** backed by the **Firebase Admin SDK**. The middleware validates the Firebase JWT, extracts the user ID, and injects it into the request context. Business logic never handles raw tokens.
+
+The Firebase `serviceAccount.json` is not committed to the repository. Instead it is base64 URL-safe encoded and passed to the server as the `FIREBASE_SERVICE_ACCOUNT_BASE64` environment variable. The middleware decodes it at startup to initialise the Admin SDK.
 
 ### Request Flow
 
 ```
 Client Request
-  → API Gateway
-  → Lambda Authorizer (Firebase token validation)
+  → Railway (Node.js server)
+  → Auth Middleware (Firebase token validation)
   → Route Handler
   → Service Layer (business logic + conflict resolution)
   → Drizzle ORM
-  → PostgreSQL (ACID transaction)
+  → PostgreSQL / Aiven (ACID transaction)
   → Response
 ```
 
@@ -117,12 +140,12 @@ The API surface covers four domains: **events** (the core sync mechanism), **bud
 
 ### Profile Photo Upload Flow
 
-Direct-to-S3 upload avoids routing binary data through Lambda:
+Direct-to-S3 upload avoids routing binary data through the server:
 
 ```
 Client → GET /user/photo-upload-url → receives presigned S3 URL
 Client → PUT <presigned URL> (uploads directly to S3)
-Client → POST /user/confirm-photo-upload → Lambda updates DB record
+Client → POST /user/confirm-photo-upload → server updates DB record
 User   → photo served via CloudFront CDN
 ```
 
@@ -248,50 +271,45 @@ All `budgets`, `categories` and `expenses` carry a `version` integer. The server
 
 ## Cloud Infrastructure
 
-All resources are provisioned and managed via **Terraform**. No manual console configuration.
+S3 and CloudFront are provisioned and managed via **Terraform**. The Node.js server runs on **Railway**. The database is hosted on **Aiven**. No manual console configuration for any of these.
 
 ### Resources
 
 | Resource | Purpose |
 |----------|---------|
-| **API Gateway** | HTTP entrypoint, routes to Lambda, hosts authorizer |
-| **Lambda** | Monolithic request handler (Node.js runtime) |
-| **Lambda Authorizer** | Firebase JWT validation per request |
-| **PostgreSQL (by Avien)** | Primary data store. Explore more about [Avien](https://aiven.io/postgresql). |
+| **Railway** | Hosts the Node.js server; auto-deploys on push to main |
+| **PostgreSQL (Aiven)** | Primary data store. See [Aiven](https://aiven.io/postgresql) |
 | **S3 Bucket** | Profile photo storage (presigned upload target) |
 | **CloudFront** | CDN for serving profile photos |
-| **IAM Roles & Policies** | Least-privilege access for Lambda and S3 |
-| **CloudWatch** | Lambda execution logging |
 
 ### Environment
 
-Currently a single production environment. Multi-environment (dev/staging/prod) Terraform workspace separation is on the roadmap.
+Currently a single production environment. Multi-environment (dev/staging/prod) separation is on the roadmap.
 
 ---
 
 ## CI/CD Pipeline
 
-Implemented with **GitHub Actions**, triggered on push to main.
+Implemented with **GitHub Actions**, triggered on push to main. Railway detects the same push and auto-deploys the server independently — GH Actions does not trigger Railway directly, but Terraform and migrations are prerequisites that should complete before Railway's new build starts serving traffic.
 
 ### Pipeline Steps
 
 ```
 Push to main
   │
-  ├── 1. TypeScript build check (tsc — no emit)
-  │         Fails fast on type errors before any deployment
+  ├── 1. Apply Terraform changes (S3 + CloudFront)
+  │         Storage infrastructure changes applied first
   │
-  ├── 2. Apply Terraform changes
-  │         Infrastructure changes applied first (e.g. new env vars, IAM)
+  ├── 2. Deploy database migrations
+  │         Drizzle migrations run against Aiven PostgreSQL
   │
-  └── 3. Deploy database migrations
-            Drizzle migrations run against production DB
-            Lambda deployment follows after schema is current
+  └── 3. Railway auto-deploys (triggered by the same push)
+            New server build goes live after infra and schema are current
 ```
 
-**Deploy only triggers on main.** Feature branches run the build check only.
+**Deploy only triggers on main.** Feature branches do not trigger any of these steps.
 
-The ordering matters: infrastructure is updated before migrations, and migrations run before the new Lambda code is live — preventing the new handler from running against a stale schema.
+The ordering matters: infrastructure is updated before migrations, and migrations run before the new server build is live — preventing the updated handler from running against a stale schema.
 
 ---
 
@@ -299,15 +317,16 @@ The ordering matters: infrastructure is updated before migrations, and migration
 
 | Layer | Technology | Reason |
 |-------|-----------|--------|
-| Runtime | Node.js | Lightweight Lambda execution, fast cold starts |
+| Runtime | Node.js | Persistent server process, no cold start overhead |
 | Language | TypeScript | Type safety across API contracts and DB schema |
+| Hosting | Railway | Managed Node.js deployment, auto-deploy from GitHub |
 | ORM | Drizzle | TypeScript-native, schema-as-code, migration tooling |
-| Database | PostgreSQL | ACID transactions, referential integrity, versioning |
-| Auth | Firebase Admin SDK | Offloads user management; JWT validation in authorizer |
-| Storage | AWS S3 + presigned URLs | Binary uploads bypass Lambda; no size or timeout limits |
+| Database | PostgreSQL (Aiven) | ACID transactions, referential integrity, versioning |
+| Auth | Firebase Admin SDK | Offloads user management; JWT validation in middleware |
+| Storage | AWS S3 + presigned URLs | Binary uploads bypass the server; no size or timeout limits |
 | CDN | CloudFront | Low-latency profile photo delivery |
-| Infrastructure | Terraform | Reproducible, version-controlled infra |
-| CI/CD | GitHub Actions | Build check + infra + migration pipeline on push |
+| Infrastructure | Terraform | Manages S3 + CloudFront; reproducible and version-controlled |
+| CI/CD | GitHub Actions | Terraform + migration pipeline on push to main |
 
 ---
 
@@ -315,7 +334,7 @@ The ordering matters: infrastructure is updated before migrations, and migration
 
 ```
 src/
-  ├── routes/           ← API Gateway route handlers (one file per domain)
+  ├── routes/           ← Route handlers (one file per domain)
   ├── services/         ← Business logic (event processing, conflict resolution)
   ├── db/               ← Drizzle schema definitions and query helpers
   └── middleware/       ← Auth context extraction, error handling
@@ -325,7 +344,6 @@ drizzle/
   └── seed/            ← Sample data
 
 terraform/
-  ├── main.tf           ← Lambda, API Gateway, IAM
   ├── storage.tf        ← S3, CloudFront
   └── variables.tf
 
@@ -340,7 +358,7 @@ scripts/                ← Utility scripts (seed, migration runner)
 
 - Node.js 22+
 - Docker (local PostgreSQL)
-- AWS CLI configured with credentials
+- AWS CLI configured with credentials (for S3 + CloudFront via Terraform)
 - Firebase project with Admin SDK service account
 
 ### Local Development
@@ -379,9 +397,32 @@ npm run drizzle:seed:fake_users
 npm run dev
 ```
 
-### Deploying to AWS
+### Deploying
 
-Ensure Terraform is initialized and AWS credentials are set Push to master — the CI/CD pipeline handles the rest.
+Before pushing to main, complete these one-time manual steps in order:
+
+**1. Provision the Aiven PostgreSQL database**
+
+Create the PostgreSQL service on [Aiven](https://aiven.io/postgresql) first. The database must exist before migrations can run. Copy the connection string — you'll need it for the Railway environment variables below.
+
+**2. Configure Railway environment variables**
+
+In the Railway project dashboard, open the **Variables** table and add all required environment variables manually. Key ones to set:
+
+| Variable | Notes |
+|----------|-------|
+| `DATABASE_URL` | Aiven PostgreSQL connection string |
+| `CDN_BASE_URL` | CloudFront distribution URL — only available after Terraform has provisioned CloudFront (step 3). Add or update this after the first Terraform run. |
+| `FIREBASE_SERVICE_ACCOUNT_BASE64` | Base64 URL-safe encoded `serviceAccount.json` (see Authentication note in Architecture) |
+| *(other env vars)* | Refer to `example.env` for the full list |
+
+**3. Apply Terraform (S3 + CloudFront)**
+
+Ensure Terraform is initialised and AWS credentials are set, then push to main — the GH Actions pipeline applies Terraform changes and runs database migrations automatically. After the first Terraform run, copy the CloudFront URL into `CDN_BASE_URL` in Railway if not already set.
+
+**4. Server (Railway)**
+
+Railway is connected to this repository and auto-deploys on every push to main. No manual deploy step is needed once environment variables are configured.
 
 ---
 
@@ -417,10 +458,6 @@ This is the most significant gap in the current project and the first area for i
 
 ## Limitations & Trade-offs
 
-### Connection Pooling Under Concurrency
-
-Lambda connection pools are per-instance. Under high concurrency, multiple warm Lambda instances each hold their own pool, which can exhaust PostgreSQL's connection limit. **RDS Proxy** would sit between Lambda and PostgreSQL and multiplex connections — the right next step if concurrency scales.
-
 ### Stop-on-First-Error Batch Processing
 
 The current batch model stops at the first failing event. This is simple and predictable, but means a single version conflict blocks the rest of a batch. An alternative is to process all events independently and return a per-event result map — more complex to implement on both client and server, but more efficient for large batches with isolated failures.
@@ -444,7 +481,6 @@ Covered in the Testing section above. This is the most important gap for product
 | Priority | Item | Reason |
 |----------|------|--------|
 | High | Integration tests for event pipeline and conflict resolution | Core correctness, highest-risk code |
-| High | RDS Proxy | Prevent connection exhaustion under Lambda concurrency |
 | Medium | Per-event batch result map (replace stop-on-first-error) | More resilient client sync |
 | Medium | Cursor-based pagination standardization across all list endpoints | Consistency and scalability |
 | Medium | Terraform multi-environment (dev/staging/prod) | Safe infra changes |

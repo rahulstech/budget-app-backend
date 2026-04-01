@@ -1,13 +1,17 @@
 name: Deploy
 
 on: 
-    push:
-        branches:
-            - master
+    release:
+        types: 
+          #- created -> it will trigger on draft release
+          - published
+
 
 jobs:
     migrate_db:
       runs-on: ubuntu-latest
+      # run when new release published on master branch
+      if: github.event.release.target_commitish == 'master'
       steps:
         - name: Checkout code
           uses: actions/checkout@v4
@@ -37,6 +41,8 @@ jobs:
 
     deploy_storage_and_cdn:
         runs-on: ubuntu-latest
+        # run when new release published on master branch
+        if: github.event.release.target_commitish == 'master'
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
